@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronRight, ChevronDown, FolderOpen, Folder, CheckCircle2, Clock, AlertCircle, Calendar, User, FileText } from 'lucide-react';
 
-const API_URL = 'http://ap-back.azurewebsites.net';
+const API_URL = 'https://ap-back.azurewebsites.net';
 
 const styles = `
   * {
