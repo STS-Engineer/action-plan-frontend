@@ -548,7 +548,6 @@ const styles = `
   }
 
   /* ==== ACTIONS EN COLONNES (Nom, Responsable, Date, Statut) ==== */
-  /* On masque l'ancien rendu (titre/desc/meta) des actions, MAIS PAS le badge */
   .item-card-inner.is-action .item-title,
   .item-card-inner.is-action .item-description,
   .item-card-inner.is-action .item-meta {
@@ -590,11 +589,9 @@ const styles = `
     white-space: nowrap;
   }
 
-  /* couleurs d'icônes restantes (user/date) */
   .action-col.resp .meta-icon.user { color: #6366f1; }
   .action-col.date .meta-icon.calendar { color: #ec4899; }
 
-  /* Badge de statut dans la 4e colonne */
   .action-col.status .status-badge {
     display: inline-flex;
     margin-top: 0;
@@ -608,7 +605,7 @@ const styles = `
     .action-col.status { justify-content: flex-start; }
   }
 
-  /* === Type chip pour afficher le niveau hiérarchique === */
+  /* === Type chip (niveau hiérarchique) === */
   .type-chip {
     display: inline-flex;
     align-items: center;
@@ -632,28 +629,26 @@ const StatusBadge = ({ status }) => {
     completed: { text: 'Completed', className: 'completed' },
     overdue: { text: 'Overdue', className: 'overdue' },
   };
-  
   const config = statusConfig[status] || statusConfig.nouveau;
-  
-  return (
-    <span className={`status-badge ${config.className}`}>
-      {config.text}
-    </span>
-  );
+  return <span className={`status-badge ${config.className}`}>{config.text}</span>;
 };
 
-// === Helpers de libellés hiérarchiques ===
-const getHierarchyLabel = (type, depth, { plural = false } = {}) => {
+/** Libellé hiérarchique
+ * type = 'sujet' | 'action'
+ * depth = niveau visuel (indentation globale)
+ * actionDepth = niveau relatif de la chaîne d'actions (réinitialisé sous un sujet)
+ */
+const getHierarchyLabel = (type, depthLike, { plural = false } = {}) => {
   const base = type === 'action' ? 'action' : 'sujet';
-  // depth: 0 = sujet|action ; 1 = sous-... ; 2 = sous-sous-... ; etc.
-  const prefix = depth === 0 ? '' : 'sous-' + 'sous-'.repeat(Math.max(depth - 1, 0));
+  const d = Math.max(0, depthLike || 0);
+  const prefix = d === 0 ? '' : 'sous-' + 'sous-'.repeat(Math.max(d - 1, 0));
   let label = prefix ? `${prefix}${base}` : base;
   if (plural) label += 's';
   return label;
 };
 
-// Unified component for both topics (sujets) and actions
-const ItemCard = ({ item, type = 'sujet', depth = 0 }) => {
+// Unified component
+const ItemCard = ({ item, type = 'sujet', depth = 0, actionDepth = 0 }) => {
   const [expanded, setExpanded] = useState(false);
   const [children, setChildren] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -664,51 +659,43 @@ const ItemCard = ({ item, type = 'sujet', depth = 0 }) => {
   const fetchChildren = async () => {
     if (loading || children.length > 0) return;
     setLoading(true);
-    
     try {
       if (isSujet) {
-        // For a topic: load sub-topics and actions
         const [sousSujetsRes, actionsRes] = await Promise.all([
           fetch(`${API_URL}/sujets/${item.id}/sous-sujets`),
           fetch(`${API_URL}/sujets/${item.id}/actions`)
         ]);
         const sousSujets = await sousSujetsRes.json();
         const actions = await actionsRes.json();
-        
-        // Combine sub-topics & actions
         const allChildren = [
           ...sousSujets.map(s => ({ ...s, itemType: 'sujet' })),
           ...actions.map(a => ({ ...a, itemType: 'action' }))
         ];
         setChildren(allChildren);
       } else if (isAction) {
-        // For an action: only load sub-actions
         const response = await fetch(`${API_URL}/actions/${item.id}/sous-actions`);
         const sousActions = await response.json();
         setChildren(sousActions.map(sa => ({ ...sa, itemType: 'action' })));
       }
-    } catch (error) {
-      console.error('Error:', error);
+    } catch (e) {
+      console.error('Error:', e);
     }
     setLoading(false);
   };
 
   const handleToggle = () => {
-    if (!expanded) {
-      fetchChildren();
-    }
+    if (!expanded) fetchChildren();
     setExpanded(!expanded);
   };
 
-  const progressPercent = item.total_actions > 0
-    ? Math.round((item.completed_actions / item.total_actions) * 100)
-    : 0;
+  const progressPercent =
+    item.total_actions > 0
+      ? Math.round((item.completed_actions / item.total_actions) * 100)
+      : 0;
 
-  // Badge sur l'icône : montre ce qu'on a réellement quand c'est ouvert,
-  // sinon fallback sur total_actions pour garder un indicateur
-  const totalChildren = isSujet
-    ? (expanded ? children.length : (item.total_actions || 0))
-    : (expanded ? children.length : 0);
+  const totalChildren = expanded
+    ? children.length
+    : (isSujet ? (item.total_actions || 0) : 0);
 
   const priorityClass = isAction && item.priorite ? `priority-${item.priorite}` : '';
   const typeClass = isSujet ? 'is-sujet' : 'is-action';
@@ -721,21 +708,15 @@ const ItemCard = ({ item, type = 'sujet', depth = 0 }) => {
             <div className="item-left">
               <div className="item-icon-wrapper">
                 {isSujet ? (
-                  expanded ? (
-                    <FolderOpen size={32} className="item-icon open" />
-                  ) : (
-                    <Folder size={32} className="item-icon" />
-                  )
+                  expanded ? <FolderOpen size={32} className="item-icon open" /> : <Folder size={32} className="item-icon" />
                 ) : (
                   <FileText size={28} className="item-icon action" />
                 )}
-                {totalChildren > 0 && (
-                  <div className="item-badge">{totalChildren}</div>
-                )}
+                {totalChildren > 0 && <div className="item-badge">{totalChildren}</div>}
               </div>
-              
+
               <div className="item-info">
-                {/* TOPIC: title/desc */}
+                {/* SUJET */}
                 {isSujet && (
                   <>
                     <h3 className="item-title">
@@ -744,13 +725,11 @@ const ItemCard = ({ item, type = 'sujet', depth = 0 }) => {
                         {getHierarchyLabel('sujet', depth)}
                       </span>
                     </h3>
-                    {item.description && (
-                      <p className="item-description">{item.description}</p>
-                    )}
+                    {item.description && <p className="item-description">{item.description}</p>}
                   </>
                 )}
 
-                {/* TOPIC: stats */}
+                {/* Stats SUJET */}
                 {isSujet && item.total_actions > 0 && (
                   <div>
                     <div className="item-stats">
@@ -771,37 +750,29 @@ const ItemCard = ({ item, type = 'sujet', depth = 0 }) => {
                   </div>
                 )}
 
-                {/* ACTION: 4-column layout */}
+                {/* ACTION */}
                 {isAction && (
                   <div className="action-row">
-                    {/* 1) Name */}
                     <div className="action-col name">
                       <span className="action-title">
                         {item.titre}
                         <span className="type-chip">
-                          {getHierarchyLabel('action', depth)}
+                          {getHierarchyLabel('action', actionDepth)}
                         </span>
                       </span>
                       {item.description && <span className="action-desc">— {item.description}</span>}
                     </div>
 
-                    {/* 2) Owner */}
                     <div className="action-col resp">
                       <User size={16} className="meta-icon user" />
                       <span>{item.responsable || '—'}</span>
                     </div>
 
-                    {/* 3) Due date */}
                     <div className="action-col date">
                       <Calendar size={16} className="meta-icon calendar" />
-                      <span>
-                        {item.due_date
-                          ? new Date(item.due_date).toLocaleDateString('en-GB')
-                          : '—'}
-                      </span>
+                      <span>{item.due_date ? new Date(item.due_date).toLocaleDateString('en-GB') : '—'}</span>
                     </div>
 
-                    {/* 4) Status */}
                     <div className="action-col status">
                       <StatusBadge status={item.status} />
                     </div>
@@ -809,72 +780,71 @@ const ItemCard = ({ item, type = 'sujet', depth = 0 }) => {
                 )}
               </div>
             </div>
-            
+
             <button className="item-toggle" aria-label={expanded ? 'Collapse' : 'Expand'}>
               {expanded ? <ChevronDown size={28} /> : <ChevronRight size={28} />}
             </button>
           </div>
         </div>
 
-        {/* Children */}
+        {/* CHILDREN */}
         {expanded && children.length > 0 && (
           <div className="item-children">
             {isSujet ? (
-              <>
-                {/* Séparer sous-sujets et actions */}
-                {(() => {
-                  const sujetChildren = children.filter(c => c.itemType === 'sujet');
-                  const actionChildren = children.filter(c => c.itemType === 'action');
+              // Sous un SUJET : on réinitialise la hiérarchie des actions (actionDepth=0)
+              (() => {
+                const sujetChildren = children.filter(c => c.itemType === 'sujet');
+                const actionChildren = children.filter(c => c.itemType === 'action');
+                return (
+                  <>
+                    {sujetChildren.length > 0 && (
+                      <>
+                        <h5 className="children-title">
+                          <ChevronRight size={16} />
+                          {`${getHierarchyLabel('sujet', depth + 1, { plural: true })} (${sujetChildren.length})`}
+                        </h5>
+                        <div className="nested-items">
+                          {sujetChildren.map((child) => (
+                            <ItemCard
+                              key={`sujet-${child.id}`}
+                              item={child}
+                              type="sujet"
+                              depth={depth + 1}
+                              actionDepth={0}   // reset chaîne d'actions sous un sujet
+                            />
+                          ))}
+                        </div>
+                      </>
+                    )}
 
-                  return (
-                    <>
-                      {sujetChildren.length > 0 && (
-                        <>
-                          <h5 className="children-title">
-                            <ChevronRight size={16} />
-                            {`${getHierarchyLabel('sujet', depth + 1, { plural: true })} (${sujetChildren.length})`}
-                          </h5>
-                          <div className="nested-items">
-                            {sujetChildren.map((child) => (
-                              <ItemCard
-                                key={`sujet-${child.id}`}
-                                item={child}
-                                type="sujet"
-                                depth={depth + 1}
-                              />
-                            ))}
-                          </div>
-                        </>
-                      )}
-
-                      {actionChildren.length > 0 && (
-                        <>
-                          <h5 className="children-title" style={{ marginTop: sujetChildren.length ? '1rem' : 0 }}>
-                            <ChevronRight size={16} />
-                            {`${getHierarchyLabel('action', depth + 1, { plural: true })} (${actionChildren.length})`}
-                          </h5>
-                          <div className="nested-items">
-                            {actionChildren.map((child) => (
-                              <ItemCard
-                                key={`action-${child.id}`}
-                                item={child}
-                                type="action"
-                                depth={depth + 1}
-                              />
-                            ))}
-                          </div>
-                        </>
-                      )}
-                    </>
-                  );
-                })()}
-              </>
+                    {actionChildren.length > 0 && (
+                      <>
+                        <h5 className="children-title" style={{ marginTop: sujetChildren.length ? '1rem' : 0 }}>
+                          <ChevronRight size={16} />
+                          {`${getHierarchyLabel('action', 0, { plural: true })} (${actionChildren.length})`}
+                        </h5>
+                        <div className="nested-items">
+                          {actionChildren.map((child) => (
+                            <ItemCard
+                              key={`action-${child.id}`}
+                              item={child}
+                              type="action"
+                              depth={depth + 1}
+                              actionDepth={0}   {/* première couche d'action = "action" */}
+                            />
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </>
+                );
+              })()
             ) : (
+              // Sous une ACTION : on continue la chaîne (actionDepth + 1)
               <>
-                {/* Pour une ACTION: uniquement des sous-actions */}
                 <h5 className="children-title">
                   <ChevronRight size={16} />
-                  {`${getHierarchyLabel('action', depth + 1, { plural: true })} (${children.length})`}
+                  {`${getHierarchyLabel('action', actionDepth + 1, { plural: true })} (${children.length})`}
                 </h5>
                 <div className="nested-items">
                   {children.map((child) => (
@@ -883,6 +853,7 @@ const ItemCard = ({ item, type = 'sujet', depth = 0 }) => {
                       item={child}
                       type="action"
                       depth={depth + 1}
+                      actionDepth={actionDepth + 1}
                     />
                   ))}
                 </div>
@@ -893,9 +864,7 @@ const ItemCard = ({ item, type = 'sujet', depth = 0 }) => {
 
         {expanded && children.length === 0 && !loading && (
           <div className="item-children">
-            <p className="no-items">
-              {isSujet ? 'No content' : 'No sub-actions'}
-            </p>
+            <p className="no-items">{isSujet ? 'No content' : 'No sub-actions'}</p>
           </div>
         )}
 
@@ -915,9 +884,7 @@ const App = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  useEffect(() => { fetchData(); }, []);
 
   const fetchData = async () => {
     try {
@@ -925,14 +892,9 @@ const App = () => {
         fetch(`${API_URL}/sujets-racines`),
         fetch(`${API_URL}/statistiques`)
       ]);
-      
-      if (!sujetsRes.ok || !statsRes.ok) {
-        throw new Error('API connection error');
-      }
-      
+      if (!sujetsRes.ok || !statsRes.ok) throw new Error('API connection error');
       const sujetsData = await sujetsRes.json();
       const statsData = await statsRes.json();
-      
       setSujets(sujetsData);
       setStats(statsData);
       setLoading(false);
@@ -966,9 +928,7 @@ const App = () => {
             <h2 className="error-title">Connection Error</h2>
             <p className="error-message">{error}</p>
             <p className="error-hint">Please check that the API is running at http://localhost:5000</p>
-            <button onClick={fetchData} className="retry-button">
-              Retry
-            </button>
+            <button onClick={fetchData} className="retry-button">Retry</button>
           </div>
         </div>
       </>
@@ -1035,11 +995,11 @@ const App = () => {
               All Topics
               <span className="main-title-count">({sujets.length})</span>
             </h2>
-            
+
             {sujets.length > 0 ? (
               <div>
                 {sujets.map((sujet) => (
-                  <ItemCard key={sujet.id} item={sujet} type="sujet" />
+                  <ItemCard key={sujet.id} item={sujet} type="sujet" depth={0} actionDepth={0} />
                 ))}
               </div>
             ) : (
