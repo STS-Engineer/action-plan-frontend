@@ -607,6 +607,22 @@ const styles = `
     }
     .action-col.status { justify-content: flex-start; }
   }
+
+  /* === Type chip pour afficher le niveau hiérarchique === */
+  .type-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    padding: 0.15rem 0.6rem;
+    border-radius: 9999px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    background: #eef2ff;
+    color: #4f46e5;
+    border: 1px solid #e5e7eb;
+    margin-left: .5rem;
+    text-transform: lowercase;
+  }
 `;
 
 const StatusBadge = ({ status }) => {
@@ -624,6 +640,16 @@ const StatusBadge = ({ status }) => {
       {config.text}
     </span>
   );
+};
+
+// === Helpers de libellés hiérarchiques ===
+const getHierarchyLabel = (type, depth, { plural = false } = {}) => {
+  const base = type === 'action' ? 'action' : 'sujet';
+  // depth: 0 = sujet|action ; 1 = sous-... ; 2 = sous-sous-... ; etc.
+  const prefix = depth === 0 ? '' : 'sous-' + 'sous-'.repeat(Math.max(depth - 1, 0));
+  let label = prefix ? `${prefix}${base}` : base;
+  if (plural) label += 's';
+  return label;
 };
 
 // Unified component for both topics (sujets) and actions
@@ -678,9 +704,11 @@ const ItemCard = ({ item, type = 'sujet', depth = 0 }) => {
     ? Math.round((item.completed_actions / item.total_actions) * 100)
     : 0;
 
-  const totalChildren = isSujet 
-    ? (item.total_actions || 0) 
-    : 0;
+  // Badge sur l'icône : montre ce qu'on a réellement quand c'est ouvert,
+  // sinon fallback sur total_actions pour garder un indicateur
+  const totalChildren = isSujet
+    ? (expanded ? children.length : (item.total_actions || 0))
+    : (expanded ? children.length : 0);
 
   const priorityClass = isAction && item.priorite ? `priority-${item.priorite}` : '';
   const typeClass = isSujet ? 'is-sujet' : 'is-action';
@@ -710,7 +738,12 @@ const ItemCard = ({ item, type = 'sujet', depth = 0 }) => {
                 {/* TOPIC: title/desc */}
                 {isSujet && (
                   <>
-                    <h3 className="item-title">{item.titre}</h3>
+                    <h3 className="item-title">
+                      {item.titre}
+                      <span className="type-chip">
+                        {getHierarchyLabel('sujet', depth)}
+                      </span>
+                    </h3>
                     {item.description && (
                       <p className="item-description">{item.description}</p>
                     )}
@@ -743,7 +776,12 @@ const ItemCard = ({ item, type = 'sujet', depth = 0 }) => {
                   <div className="action-row">
                     {/* 1) Name */}
                     <div className="action-col name">
-                      <span className="action-title">{item.titre}</span>
+                      <span className="action-title">
+                        {item.titre}
+                        <span className="type-chip">
+                          {getHierarchyLabel('action', depth)}
+                        </span>
+                      </span>
                       {item.description && <span className="action-desc">— {item.description}</span>}
                     </div>
 
@@ -778,22 +816,78 @@ const ItemCard = ({ item, type = 'sujet', depth = 0 }) => {
           </div>
         </div>
 
+        {/* Children */}
         {expanded && children.length > 0 && (
           <div className="item-children">
-            <h5 className="children-title">
-              <ChevronRight size={16} />
-              {isSujet ? `Content (${children.length})` : `Sub-actions (${children.length})`}
-            </h5>
-            <div className="nested-items">
-              {children.map((child) => (
-                <ItemCard 
-                  key={`${child.itemType}-${child.id}`} 
-                  item={child} 
-                  type={child.itemType}
-                  depth={0}
-                />
-              ))}
-            </div>
+            {isSujet ? (
+              <>
+                {/* Séparer sous-sujets et actions */}
+                {(() => {
+                  const sujetChildren = children.filter(c => c.itemType === 'sujet');
+                  const actionChildren = children.filter(c => c.itemType === 'action');
+
+                  return (
+                    <>
+                      {sujetChildren.length > 0 && (
+                        <>
+                          <h5 className="children-title">
+                            <ChevronRight size={16} />
+                            {`${getHierarchyLabel('sujet', depth + 1, { plural: true })} (${sujetChildren.length})`}
+                          </h5>
+                          <div className="nested-items">
+                            {sujetChildren.map((child) => (
+                              <ItemCard
+                                key={`sujet-${child.id}`}
+                                item={child}
+                                type="sujet"
+                                depth={depth + 1}
+                              />
+                            ))}
+                          </div>
+                        </>
+                      )}
+
+                      {actionChildren.length > 0 && (
+                        <>
+                          <h5 className="children-title" style={{ marginTop: sujetChildren.length ? '1rem' : 0 }}>
+                            <ChevronRight size={16} />
+                            {`${getHierarchyLabel('action', depth + 1, { plural: true })} (${actionChildren.length})`}
+                          </h5>
+                          <div className="nested-items">
+                            {actionChildren.map((child) => (
+                              <ItemCard
+                                key={`action-${child.id}`}
+                                item={child}
+                                type="action"
+                                depth={depth + 1}
+                              />
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </>
+                  );
+                })()}
+              </>
+            ) : (
+              <>
+                {/* Pour une ACTION: uniquement des sous-actions */}
+                <h5 className="children-title">
+                  <ChevronRight size={16} />
+                  {`${getHierarchyLabel('action', depth + 1, { plural: true })} (${children.length})`}
+                </h5>
+                <div className="nested-items">
+                  {children.map((child) => (
+                    <ItemCard
+                      key={`action-${child.id}`}
+                      item={child}
+                      type="action"
+                      depth={depth + 1}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         )}
 
