@@ -304,20 +304,32 @@ const styles = `
     margin-top: 0.5rem;
   }
 
-  .status-badge.nouveau {
+  .status-badge.blocked {
+    background: #ef4444;
+  }
+
+  .status-badge.closed {
+    background: #1f2937;
+  }
+
+  .status-badge.open {
     background: #3b82f6;
   }
 
+  .status-badge.overdue {
+    background: #10b981;
+  }
+
+  .status-badge.new {
+    background: #8b5cf6;
+  }
+
   .status-badge.in_progress {
-    background: #eab308;
+    background: #f59e0b;
   }
 
   .status-badge.completed {
     background: #10b981;
-  }
-
-  .status-badge.overdue {
-    background: #ef4444;
   }
 
   .priority-label {
@@ -667,13 +679,18 @@ const styles = `
 
 const StatusBadge = ({ status }) => {
   const statusConfig = {
+    // Statuts de la base de données avec les couleurs demandées
     blocked: { text: 'Blocked', className: 'blocked' },
     closed: { text: 'Closed', className: 'closed' },
     open: { text: 'Open', className: 'open' },
     overdue: { text: 'Overdue', className: 'overdue' },
+    
+    
   };
   
-  const config = statusConfig[status] || statusConfig.nouveau;
+  // Utiliser directement le statut de la base de données
+  const normalizedStatus = status ? status.toLowerCase() : 'new';
+  const config = statusConfig[normalizedStatus] || statusConfig.new;
   
   return (
     <span className={`status-badge ${config.className}`}>
@@ -838,7 +855,7 @@ const ItemCard = ({ item, type = 'sujet', depth = 0, sujetDepth = 0, actionDepth
                       </span>
                     </div>
 
-                    {/* 4) Status */}
+                    {/* 4) Status - Utilise directement item.status de la base de données */}
                     <div className="action-col status">
                       <StatusBadge status={item.status} />
                     </div>
