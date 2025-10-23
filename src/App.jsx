@@ -557,10 +557,11 @@ const styles = `
 
   .action-row {
     display: grid;
-    grid-template-columns: 1fr 220px 160px 140px; /* Nom | Resp. | Date | Statut */
-    gap: 1rem;
+    grid-template-columns: 2fr 1fr 1fr auto; /* Plus d'espace pour le nom */
+    gap: 1.5rem;
     align-items: center;
     padding-top: 0.25rem;
+    width: 100%;
   }
 
   .action-col {
@@ -573,9 +574,20 @@ const styles = `
   .action-col.name {
     font-weight: 700;
     color: #111827;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .action-title-container {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    flex: 1;
   }
 
   .action-title {
+    font-weight: 700;
+    color: #111827;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -584,10 +596,11 @@ const styles = `
   .action-desc {
     font-weight: 500;
     color: #6b7280;
-    margin-left: 0.5rem;
+    font-size: 0.875rem;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    margin-top: 0.25rem;
   }
 
   /* couleurs d'icônes restantes (user/date) */
@@ -598,14 +611,57 @@ const styles = `
   .action-col.status .status-badge {
     display: inline-flex;
     margin-top: 0;
+    white-space: nowrap;
   }
 
-  @media (max-width: 860px) {
+  /* Responsive design pour les écrans moyens */
+  @media (max-width: 1024px) {
     .action-row {
-      grid-template-columns: 1fr 1fr;
-      row-gap: .5rem;
+      grid-template-columns: 1.5fr 1fr 1fr auto;
+      gap: 1rem;
     }
-    .action-col.status { justify-content: flex-start; }
+  }
+
+  /* Responsive design pour les petits écrans */
+  @media (max-width: 768px) {
+    .action-row {
+      grid-template-columns: 1fr;
+      gap: 0.75rem;
+    }
+    
+    .action-col {
+      justify-content: flex-start;
+    }
+    
+    .action-col.name {
+      grid-column: 1 / -1;
+      margin-bottom: 0.5rem;
+    }
+    
+    .action-col.resp,
+    .action-col.date,
+    .action-col.status {
+      justify-content: flex-start;
+    }
+  }
+
+  /* Pour les très petits écrans */
+  @media (max-width: 480px) {
+    .action-row {
+      gap: 0.5rem;
+    }
+    
+    .action-col {
+      font-size: 0.875rem;
+    }
+    
+    .action-title {
+      font-size: 1rem;
+    }
+    
+    .action-desc {
+      font-size: 0.8rem;
+    }
   }
 `;
 
@@ -756,10 +812,14 @@ const ItemCard = ({ item, type = 'sujet', depth = 0, sujetDepth = 0, actionDepth
                 {/* ACTION: 4-column layout */}
                 {isAction && (
                   <div className="action-row">
-                    {/* 1) Name */}
+                    {/* 1) Name - Maintenant avec plus d'espace */}
                     <div className="action-col name">
-                      <span className="action-title">{item.titre}</span>
-                      {item.description && <span className="action-desc">— {item.description}</span>}
+                      <div className="action-title-container">
+                        <span className="action-title">{item.titre}</span>
+                        {item.description && (
+                          <span className="action-desc">{item.description}</span>
+                        )}
+                      </div>
                     </div>
 
                     {/* 2) Owner */}
