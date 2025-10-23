@@ -611,10 +611,10 @@ const styles = `
 
 const StatusBadge = ({ status }) => {
   const statusConfig = {
-    nouveau: { text: 'Nouveau', className: 'nouveau' },
-    in_progress: { text: 'En cours', className: 'in_progress' },
-    completed: { text: 'Terminé', className: 'completed' },
-    overdue: { text: 'En retard', className: 'overdue' },
+    nouveau: { text: 'New', className: 'nouveau' },
+    in_progress: { text: 'In progress', className: 'in_progress' },
+    completed: { text: 'Completed', className: 'completed' },
+    overdue: { text: 'Overdue', className: 'overdue' },
   };
   
   const config = statusConfig[status] || statusConfig.nouveau;
@@ -626,7 +626,7 @@ const StatusBadge = ({ status }) => {
   );
 };
 
-// Composant unifié qui gère à la fois les sujets et les actions
+// Unified component for both topics (sujets) and actions
 const ItemCard = ({ item, type = 'sujet', depth = 0 }) => {
   const [expanded, setExpanded] = useState(false);
   const [children, setChildren] = useState([]);
@@ -641,7 +641,7 @@ const ItemCard = ({ item, type = 'sujet', depth = 0 }) => {
     
     try {
       if (isSujet) {
-        // Pour un sujet: charger sous-sujets ET actions
+        // For a topic: load sub-topics and actions
         const [sousSujetsRes, actionsRes] = await Promise.all([
           fetch(`${API_URL}/sujets/${item.id}/sous-sujets`),
           fetch(`${API_URL}/sujets/${item.id}/actions`)
@@ -649,20 +649,20 @@ const ItemCard = ({ item, type = 'sujet', depth = 0 }) => {
         const sousSujets = await sousSujetsRes.json();
         const actions = await actionsRes.json();
         
-        // Combiner sous-sujets et actions
+        // Combine sub-topics & actions
         const allChildren = [
           ...sousSujets.map(s => ({ ...s, itemType: 'sujet' })),
           ...actions.map(a => ({ ...a, itemType: 'action' }))
         ];
         setChildren(allChildren);
       } else if (isAction) {
-        // Pour une action: charger seulement les sous-actions
+        // For an action: only load sub-actions
         const response = await fetch(`${API_URL}/actions/${item.id}/sous-actions`);
         const sousActions = await response.json();
         setChildren(sousActions.map(sa => ({ ...sa, itemType: 'action' })));
       }
     } catch (error) {
-      console.error('Erreur:', error);
+      console.error('Error:', error);
     }
     setLoading(false);
   };
@@ -707,7 +707,7 @@ const ItemCard = ({ item, type = 'sujet', depth = 0 }) => {
               </div>
               
               <div className="item-info">
-                {/* SUJET : titre/desc */}
+                {/* TOPIC: title/desc */}
                 {isSujet && (
                   <>
                     <h3 className="item-title">{item.titre}</h3>
@@ -717,18 +717,18 @@ const ItemCard = ({ item, type = 'sujet', depth = 0 }) => {
                   </>
                 )}
 
-                {/* SUJET : stats */}
+                {/* TOPIC: stats */}
                 {isSujet && item.total_actions > 0 && (
                   <div>
                     <div className="item-stats">
                       <span className="stat-item green">
                         <CheckCircle2 size={16} />
-                        {item.completed_actions} / {item.total_actions} terminées
+                        {item.completed_actions} / {item.total_actions} completed
                       </span>
                       {item.overdue_actions > 0 && (
                         <span className="stat-item red">
                           <AlertCircle size={16} />
-                          {item.overdue_actions} en retard
+                          {item.overdue_actions} overdue
                         </span>
                       )}
                     </div>
@@ -738,32 +738,32 @@ const ItemCard = ({ item, type = 'sujet', depth = 0 }) => {
                   </div>
                 )}
 
-                {/* ACTION : rendu en 4 colonnes */}
+                {/* ACTION: 4-column layout */}
                 {isAction && (
                   <div className="action-row">
-                    {/* 1) Nom (sans icône) */}
+                    {/* 1) Name */}
                     <div className="action-col name">
                       <span className="action-title">{item.titre}</span>
                       {item.description && <span className="action-desc">— {item.description}</span>}
                     </div>
 
-                    {/* 2) Responsable */}
+                    {/* 2) Owner */}
                     <div className="action-col resp">
                       <User size={16} className="meta-icon user" />
                       <span>{item.responsable || '—'}</span>
                     </div>
 
-                    {/* 3) Date */}
+                    {/* 3) Due date */}
                     <div className="action-col date">
                       <Calendar size={16} className="meta-icon calendar" />
                       <span>
                         {item.due_date
-                          ? new Date(item.due_date).toLocaleDateString('fr-FR')
+                          ? new Date(item.due_date).toLocaleDateString('en-GB')
                           : '—'}
                       </span>
                     </div>
 
-                    {/* 4) Statut */}
+                    {/* 4) Status */}
                     <div className="action-col status">
                       <StatusBadge status={item.status} />
                     </div>
@@ -772,7 +772,7 @@ const ItemCard = ({ item, type = 'sujet', depth = 0 }) => {
               </div>
             </div>
             
-            <button className="item-toggle" aria-label={expanded ? 'Réduire' : 'Développer'}>
+            <button className="item-toggle" aria-label={expanded ? 'Collapse' : 'Expand'}>
               {expanded ? <ChevronDown size={28} /> : <ChevronRight size={28} />}
             </button>
           </div>
@@ -782,7 +782,7 @@ const ItemCard = ({ item, type = 'sujet', depth = 0 }) => {
           <div className="item-children">
             <h5 className="children-title">
               <ChevronRight size={16} />
-              {isSujet ? `Contenu (${children.length})` : `Sous-actions (${children.length})`}
+              {isSujet ? `Content (${children.length})` : `Sub-actions (${children.length})`}
             </h5>
             <div className="nested-items">
               {children.map((child) => (
@@ -800,14 +800,14 @@ const ItemCard = ({ item, type = 'sujet', depth = 0 }) => {
         {expanded && children.length === 0 && !loading && (
           <div className="item-children">
             <p className="no-items">
-              {isSujet ? 'Aucun contenu' : 'Aucune sous-action'}
+              {isSujet ? 'No content' : 'No sub-actions'}
             </p>
           </div>
         )}
 
         {expanded && loading && (
           <div className="item-children">
-            <p className="no-items">Chargement...</p>
+            <p className="no-items">Loading...</p>
           </div>
         )}
       </div>
@@ -833,7 +833,7 @@ const App = () => {
       ]);
       
       if (!sujetsRes.ok || !statsRes.ok) {
-        throw new Error('Erreur de connexion à l\'API');
+        throw new Error('API connection error');
       }
       
       const sujetsData = await sujetsRes.json();
@@ -855,7 +855,7 @@ const App = () => {
         <div className="loading-container">
           <div className="loading-content">
             <div className="spinner"></div>
-            <p className="loading-text">Chargement...</p>
+            <p className="loading-text">Loading...</p>
           </div>
         </div>
       </>
@@ -869,11 +869,11 @@ const App = () => {
         <div className="error-container">
           <div className="error-card">
             <AlertCircle size={48} className="error-icon" />
-            <h2 className="error-title">Erreur de connexion</h2>
+            <h2 className="error-title">Connection Error</h2>
             <p className="error-message">{error}</p>
-            <p className="error-hint">Vérifiez que l'API est démarrée sur http://localhost:5000</p>
+            <p className="error-hint">Please check that the API is running at http://localhost:5000</p>
             <button onClick={fetchData} className="retry-button">
-              Réessayer
+              Retry
             </button>
           </div>
         </div>
@@ -887,8 +887,8 @@ const App = () => {
       <div className="app-container">
         <div className="container">
           <header className="header">
-            <h1>📋 Action Plan Manager</h1>
-            <p>Visualisez et gérez vos projets et actions</p>
+            <h1>📋 Action Plan Management </h1>
+            <p>View and manage your projects and actions</p>
           </header>
 
           {stats && (
@@ -896,7 +896,7 @@ const App = () => {
               <div className="stat-card stat-card-blue">
                 <div className="stat-card-content">
                   <div>
-                    <p className="stat-label">Total Sujets</p>
+                    <p className="stat-label">Total Topics</p>
                     <p className="stat-value">{stats.total_sujets}</p>
                   </div>
                   <Folder size={48} className="stat-icon" />
@@ -906,7 +906,7 @@ const App = () => {
               <div className="stat-card stat-card-green">
                 <div className="stat-card-content">
                   <div>
-                    <p className="stat-label">Terminées</p>
+                    <p className="stat-label">Completed</p>
                     <p className="stat-value">{stats.actions_completed}</p>
                   </div>
                   <CheckCircle2 size={48} className="stat-icon" />
@@ -916,7 +916,7 @@ const App = () => {
               <div className="stat-card stat-card-yellow">
                 <div className="stat-card-content">
                   <div>
-                    <p className="stat-label">En cours</p>
+                    <p className="stat-label">In progress</p>
                     <p className="stat-value">{stats.actions_in_progress}</p>
                   </div>
                   <Clock size={48} className="stat-icon" />
@@ -926,7 +926,7 @@ const App = () => {
               <div className="stat-card stat-card-red">
                 <div className="stat-card-content">
                   <div>
-                    <p className="stat-label">En retard</p>
+                    <p className="stat-label">Overdue</p>
                     <p className="stat-value">{stats.actions_overdue}</p>
                   </div>
                   <AlertCircle size={48} className="stat-icon" />
@@ -938,7 +938,7 @@ const App = () => {
           <div className="main-content">
             <h2 className="main-title">
               <FolderOpen className="main-title-icon" size={32} />
-              Tous les Sujets
+              All Topics
               <span className="main-title-count">({sujets.length})</span>
             </h2>
             
@@ -951,7 +951,7 @@ const App = () => {
             ) : (
               <div className="empty-state">
                 <Folder size={64} className="empty-icon" />
-                <p className="empty-text">Aucun sujet trouvé</p>
+                <p className="empty-text">No topics found</p>
               </div>
             )}
           </div>
