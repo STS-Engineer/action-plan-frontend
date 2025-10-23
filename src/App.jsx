@@ -627,7 +627,7 @@ const StatusBadge = ({ status }) => {
 };
 
 // Unified component for both topics (sujets) and actions
-const ItemCard = ({ item, type = 'sujet', depth = 0 }) => {
+const ItemCard = ({ item, type = 'sujet', depth = 0, sujetDepth = 0, actionDepth = 0 }) => {
   const [expanded, setExpanded] = useState(false);
   const [children, setChildren] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -684,6 +684,21 @@ const ItemCard = ({ item, type = 'sujet', depth = 0 }) => {
 
   const priorityClass = isAction && item.priorite ? `priority-${item.priorite}` : '';
   const typeClass = isSujet ? 'is-sujet' : 'is-action';
+
+  // Determine hierarchy labels
+  const getSujetLabel = (depth) => {
+    const labels = ['Sujet', 'Sous-sujet', 'Sous-sous-sujet', 'Sous-sous-sous-sujet'];
+    return labels[Math.min(depth, labels.length - 1)];
+  };
+
+  const getActionLabel = (depth) => {
+    const labels = ['Action', 'Sous-action', 'Sous-sous-action', 'Sous-sous-sous-action'];
+    return labels[Math.min(depth, labels.length - 1)];
+  };
+
+  // Separate children by type
+  const sujetChildren = children.filter(c => c.itemType === 'sujet');
+  const actionChildren = children.filter(c => c.itemType === 'action');
 
   return (
     <div className="item-card" style={{ marginLeft: `${depth * 20}px` }}>
@@ -780,34 +795,63 @@ const ItemCard = ({ item, type = 'sujet', depth = 0 }) => {
 
         {expanded && children.length > 0 && (
           <div className="item-children">
-            <h5 className="children-title">
-              <ChevronRight size={16} />
-              {isSujet ? `Content (${children.length})` : `Sub-actions (${children.length})`}
-            </h5>
-            <div className="nested-items">
-              {children.map((child) => (
-                <ItemCard 
-                  key={`${child.itemType}-${child.id}`} 
-                  item={child} 
-                  type={child.itemType}
-                  depth={0}
-                />
-              ))}
-            </div>
+            {/* Show sub-topics first if any */}
+            {sujetChildren.length > 0 && (
+              <>
+                <h5 className="children-title">
+                  <ChevronRight size={16} />
+                  {getSujetLabel(sujetDepth + 1)} ({sujetChildren.length})
+                </h5>
+                <div className="nested-items">
+                  {sujetChildren.map((child) => (
+                    <ItemCard 
+                      key={`${child.itemType}-${child.id}`} 
+                      item={child} 
+                      type={child.itemType}
+                      depth={0}
+                      sujetDepth={sujetDepth + 1}
+                      actionDepth={0}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+            
+            {/* Show actions */}
+            {actionChildren.length > 0 && (
+              <>
+                <h5 className="children-title" style={sujetChildren.length > 0 ? { marginTop: '1rem' } : {}}>
+                  <ChevronRight size={16} />
+                  {getActionLabel(actionDepth)} ({actionChildren.length})
+                </h5>
+                <div className="nested-items">
+                  {actionChildren.map((child) => (
+                    <ItemCard 
+                      key={`${child.itemType}-${child.id}`} 
+                      item={child} 
+                      type={child.itemType}
+                      depth={0}
+                      sujetDepth={sujetDepth}
+                      actionDepth={actionDepth + 1}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         )}
 
         {expanded && children.length === 0 && !loading && (
           <div className="item-children">
             <p className="no-items">
-              {isSujet ? 'No content' : 'No sub-actions'}
+              {isSujet ? 'Aucun contenu' : 'Aucune sous-action'}
             </p>
           </div>
         )}
 
         {expanded && loading && (
           <div className="item-children">
-            <p className="no-items">Loading...</p>
+            <p className="no-items">Chargement...</p>
           </div>
         )}
       </div>
@@ -871,7 +915,7 @@ const App = () => {
             <AlertCircle size={48} className="error-icon" />
             <h2 className="error-title">Connection Error</h2>
             <p className="error-message">{error}</p>
-            <p className="error-hint">Please check that the API is running at http://localhost:5000</p>
+            <p className="error-hint">Please check that the API is running</p>
             <button onClick={fetchData} className="retry-button">
               Retry
             </button>
@@ -945,7 +989,7 @@ const App = () => {
             {sujets.length > 0 ? (
               <div>
                 {sujets.map((sujet) => (
-                  <ItemCard key={sujet.id} item={sujet} type="sujet" />
+                  <ItemCard key={sujet.id} item={sujet} type="sujet" sujetDepth={0} actionDepth={0} />
                 ))}
               </div>
             ) : (
