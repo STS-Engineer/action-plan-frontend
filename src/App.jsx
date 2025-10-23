@@ -667,9 +667,9 @@ const styles = `
 
 const StatusBadge = ({ status }) => {
   const statusConfig = {
-    nouveau: { text: 'New', className: 'nouveau' },
-    in_progress: { text: 'In progress', className: 'in_progress' },
-    completed: { text: 'Completed', className: 'completed' },
+    blocked: { text: 'Blocked', className: 'blocked' },
+    closed: { text: 'Closed', className: 'closed' },
+    open: { text: 'Open', className: 'open' },
     overdue: { text: 'Overdue', className: 'overdue' },
   };
   
