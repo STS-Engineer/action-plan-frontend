@@ -20,6 +20,28 @@ const styles = `
   .app-container {
     min-height: 100vh;
     background: linear-gradient(135deg, #e9d5ff 0%, #dbeafe 50%, #fce7f3 100%);
+    position: relative;
+  }
+
+  .logo-corner {
+    position: absolute;
+    top: 1rem;
+    left: 1rem;
+    z-index: 100;
+  }
+
+  .logo-image {
+    width: 80px;
+    height: 80px;
+    border-radius: 16px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    border: 3px solid white;
+    transition: all 0.3s ease;
+  }
+
+  .logo-image:hover {
+    transform: scale(1.05);
+    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.2);
   }
 
   .container {
@@ -40,19 +62,6 @@ const styles = `
     justify-content: center;
     gap: 1rem;
     margin-bottom: 0.5rem;
-  }
-
-  .logo {
-    width: 60px;
-    height: 60px;
-    border-radius: 12px;
-    background: linear-gradient(135deg, #9333ea, #ec4899, #6366f1);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 28px;
-    color: white;
-    box-shadow: 0 4px 15px rgba(147, 51, 234, 0.3);
   }
 
   .header h1 {
@@ -652,7 +661,7 @@ const styles = `
     50% { opacity: 0.5; }
   }
 
-  /* ==== ACTIONS EN COLONNES (Nom, Responsable, Date, Statut) ==== */
+  /* ==== ACTIONS EN COLONNES ==== */
   .item-card-inner.is-action .item-title,
   .item-card-inner.is-action .item-description,
   .item-card-inner.is-action .item-meta {
@@ -707,6 +716,38 @@ const styles = `
     margin-top: 0.25rem;
   }
 
+  /* NOUVELLE DESCRIPTION SCROLLABLE POUR LES ACTIONS */
+  .action-description-full {
+    color: #4b5563;
+    font-size: 0.875rem;
+    line-height: 1.4;
+    max-height: 80px;
+    overflow-y: auto;
+    padding: 0.5rem;
+    background: rgba(255, 255, 255, 0.7);
+    border-radius: 0.5rem;
+    margin-top: 0.5rem;
+    border: 1px solid #e5e7eb;
+  }
+
+  .action-description-full::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .action-description-full::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 3px;
+  }
+
+  .action-description-full::-webkit-scrollbar-thumb {
+    background: #c4b5fd;
+    border-radius: 3px;
+  }
+
+  .action-description-full::-webkit-scrollbar-thumb:hover {
+    background: #9333ea;
+  }
+
   .action-col.resp .meta-icon.user { color: #6366f1; }
   .action-col.date .meta-icon.calendar { color: #ec4899; }
 
@@ -753,6 +794,19 @@ const styles = `
 
     .header h1 {
       font-size: 2.5rem;
+    }
+
+    .logo-corner {
+      position: relative;
+      top: 0;
+      left: 0;
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+
+    .logo-image {
+      width: 60px;
+      height: 60px;
     }
   }
 
@@ -811,7 +865,6 @@ const StatusBadge = ({ status }) => {
   );
 };
 
-// Fonction pour mettre en évidence le texte de recherche
 const HighlightText = ({ text, searchTerm }) => {
   if (!searchTerm || !text) return text;
   
@@ -832,6 +885,7 @@ const ItemCard = ({ item, type = 'sujet', depth = 0, sujetDepth = 0, actionDepth
   const [expanded, setExpanded] = useState(false);
   const [children, setChildren] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [showFullDescription, setShowFullDescription] = useState(false);
 
   const isSujet = type === 'sujet';
   const isAction = type === 'action';
@@ -955,44 +1009,56 @@ const ItemCard = ({ item, type = 'sujet', depth = 0, sujetDepth = 0, actionDepth
 
                 {/* ACTION: 4-column layout */}
                 {isAction && (
-                  <div className="action-row">
-                    {/* 1) Name */}
-                    <div className="action-col name">
-                      <div className="action-title-container">
-                        <span className="action-title">
-                          <HighlightText text={item.titre} searchTerm={searchTerm} />
-                        </span>
-                        {item.description && (
-                          <span className="action-desc">
-                            <HighlightText text={item.description} searchTerm={searchTerm} />
+                  <>
+                    <div className="action-row">
+                      {/* 1) Name */}
+                      <div className="action-col name">
+                        <div className="action-title-container">
+                          <span className="action-title">
+                            <HighlightText text={item.titre} searchTerm={searchTerm} />
                           </span>
-                        )}
+                          {item.description && (
+                            <span className="action-desc">
+                              <HighlightText 
+                                text={item.description.length > 100 ? `${item.description.substring(0, 100)}...` : item.description} 
+                                searchTerm={searchTerm} 
+                              />
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* 2) Owner */}
+                      <div className="action-col resp">
+                        <User size={16} className="meta-icon user" />
+                        <span>
+                          <HighlightText text={item.responsable || '—'} searchTerm={searchTerm} />
+                        </span>
+                      </div>
+
+                      {/* 3) Due date */}
+                      <div className="action-col date">
+                        <Calendar size={16} className="meta-icon calendar" />
+                        <span>
+                          {item.due_date
+                            ? new Date(item.due_date).toLocaleDateString('en-GB')
+                            : '—'}
+                        </span>
+                      </div>
+
+                      {/* 4) Status */}
+                      <div className="action-col status">
+                        <StatusBadge status={item.status} />
                       </div>
                     </div>
 
-                    {/* 2) Owner */}
-                    <div className="action-col resp">
-                      <User size={16} className="meta-icon user" />
-                      <span>
-                        <HighlightText text={item.responsable || '—'} searchTerm={searchTerm} />
-                      </span>
-                    </div>
-
-                    {/* 3) Due date */}
-                    <div className="action-col date">
-                      <Calendar size={16} className="meta-icon calendar" />
-                      <span>
-                        {item.due_date
-                          ? new Date(item.due_date).toLocaleDateString('en-GB')
-                          : '—'}
-                      </span>
-                    </div>
-
-                    {/* 4) Status */}
-                    <div className="action-col status">
-                      <StatusBadge status={item.status} />
-                    </div>
-                  </div>
+                    {/* DESCRIPTION COMPLÈTE SCROLLABLE POUR LES ACTIONS */}
+                    {item.description && item.description.length > 100 && (
+                      <div className="action-description-full">
+                        <HighlightText text={item.description} searchTerm={searchTerm} />
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </div>
@@ -1077,6 +1143,9 @@ const App = () => {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
 
+  // URL du logo professionnel - vous pouvez remplacer par votre propre URL
+  const logoUrl = "https://images.unsplash.com/photo-1556655848-f3a7049761a6?w=400&h=400&fit=crop&crop=center";
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -1134,7 +1203,6 @@ const App = () => {
         const itemMatches = filterItem(item);
         if (itemMatches) return true;
 
-        // Vérifier récursivement les enfants
         if (item.children && item.children.length > 0) {
           const filteredChildren = filterNestedItems(item.children);
           return filteredChildren.length > 0;
@@ -1194,10 +1262,22 @@ const App = () => {
     <>
       <style>{styles}</style>
       <div className="app-container">
+        {/* Logo professionnel dans le coin */}
+        <div className="logo-corner">
+          <img 
+            src={logoUrl} 
+            alt="Company Logo" 
+            className="logo-image"
+            onError={(e) => {
+              // Fallback si l'image ne charge pas
+              e.target.style.display = 'none';
+            }}
+          />
+        </div>
+
         <div className="container">
           <header className="header">
             <div className="header-with-logo">
-              <div className="logo">📋</div>
               <h1>Action Plan Management</h1>
             </div>
             <p>View and manage your projects and actions</p>
