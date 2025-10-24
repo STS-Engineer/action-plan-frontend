@@ -860,38 +860,46 @@ const ItemCard = ({ item, type = 'sujet', depth = 0, sujetDepth = 0, actionDepth
                 )}
 
                 {isAction && (
-                  <div className="action-row">
-                    <div className="action-col name">
-                      <div className="action-title-container">
-                        <span className="action-title">{item.titre}</span>
-                        {item.description && (
-                          <div className="action-desc">{item.description}</div>
-                        )}
+                  <>
+                    <div className="action-row">
+                      <div className="action-col name">
+                        <div className="action-title-container">
+                          <span className="action-title">{item.titre}</span>
+                          {item.description && (
+                            <div className="action-desc">{item.description}</div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="action-col resp">
+                        <User size={16} className="meta-icon user" />
+                        <span>{item.responsable || '—'}</span>
+                      </div>
+
+                      <div className="action-col date">
+                        <Calendar size={16} className="meta-icon calendar" />
+                        <span>
+                          {item.due_date
+                            ? new Date(item.due_date).toLocaleDateString('fr-FR')
+                            : '—'}
+                        </span>
+                      </div>
+
+                      <div className="action-col status">
+                        <StatusBadge 
+                          status={item.status} 
+                          actionId={item.id}
+                          onStatusChange={onStatusChange}
+                        />
                       </div>
                     </div>
-
-                    <div className="action-col resp">
-                      <User size={16} className="meta-icon user" />
-                      <span>{item.responsable || '—'}</span>
-                    </div>
-
-                    <div className="action-col date">
-                      <Calendar size={16} className="meta-icon calendar" />
-                      <span>
-                        {item.due_date
-                          ? new Date(item.due_date).toLocaleDateString('fr-FR')
-                          : '—'}
-                      </span>
-                    </div>
-
-                    <div className="action-col status">
-                      <StatusBadge 
-                        status={item.status} 
-                        actionId={item.id}
-                        onStatusChange={onStatusChange}
-                      />
-                    </div>
-                  </div>
+                    {item.closed_date && item.status === 'closed' && (
+                      <div className="closed-date-info">
+                        <Clock size={14} />
+                        <span>Fermée le: {new Date(item.closed_date).toLocaleDateString('fr-FR')} à {new Date(item.closed_date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </div>
