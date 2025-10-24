@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronRight, ChevronDown, FolderOpen, Folder, CheckCircle2, Clock, AlertCircle, Calendar, User, FileText, Search } from 'lucide-react';
+import { ChevronRight, ChevronDown, FolderOpen, Folder, CheckCircle2, Clock, AlertCircle, Calendar, User, FileText, Search, X } from 'lucide-react';
 
 const API_URL = 'https://ap-back.azurewebsites.net/api';
 
@@ -20,28 +20,6 @@ const styles = `
   .app-container {
     min-height: 100vh;
     background: linear-gradient(135deg, #e9d5ff 0%, #dbeafe 50%, #fce7f3 100%);
-    position: relative;
-  }
-
-  .logo-corner {
-    position: absolute;
-    top: 1rem;
-    left: 1rem;
-    z-index: 100;
-  }
-
-  .logo-image {
-    width: 80px;
-    height: 80px;
-    border-radius: 16px;
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-    border: 3px solid white;
-    transition: all 0.3s ease;
-  }
-
-  .logo-image:hover {
-    transform: scale(1.05);
-    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.2);
   }
 
   .container {
@@ -56,12 +34,27 @@ const styles = `
     animation: fadeIn 0.6s ease-out;
   }
 
-  .header-with-logo {
+  .logo-container {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 1rem;
-    margin-bottom: 0.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .logo {
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, #9333ea, #ec4899, #6366f1);
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 2.5rem;
+    font-weight: 900;
+    box-shadow: 0 10px 25px rgba(147, 51, 234, 0.3);
+    animation: pulse 2s infinite;
   }
 
   .header h1 {
@@ -72,7 +65,6 @@ const styles = `
     -webkit-text-fill-color: transparent;
     background-clip: text;
     margin-bottom: 0.5rem;
-    animation: pulse 2s infinite;
   }
 
   .header p {
@@ -80,39 +72,38 @@ const styles = `
     font-size: 1.125rem;
   }
 
-  .search-section {
-    margin-bottom: 2rem;
+  .search-container {
+    max-width: 600px;
+    margin: 0 auto 2rem;
+    position: relative;
     animation: slideIn 0.5s ease-out;
   }
 
-  .search-container {
+  .search-wrapper {
     position: relative;
-    max-width: 600px;
-    margin: 0 auto;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    transition: all 0.3s;
+  }
+
+  .search-wrapper:focus-within {
+    box-shadow: 0 15px 35px rgba(147, 51, 234, 0.2);
+    transform: translateY(-2px);
   }
 
   .search-input {
     width: 100%;
-    padding: 1rem 1rem 1rem 3rem;
-    border: none;
-    border-radius: 1rem;
-    background: rgba(255, 255, 255, 0.9);
-    backdrop-filter: blur(10px);
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
-    font-size: 1rem;
-    transition: all 0.3s ease;
+    padding: 1rem 3.5rem 1rem 3.5rem;
     border: 2px solid transparent;
+    font-size: 1rem;
+    outline: none;
+    transition: border-color 0.3s;
   }
 
   .search-input:focus {
-    outline: none;
     border-color: #9333ea;
-    box-shadow: 0 10px 25px -5px rgba(147, 51, 234, 0.2);
-    transform: translateY(-2px);
-  }
-
-  .search-input::placeholder {
-    color: #9ca3af;
   }
 
   .search-icon {
@@ -121,13 +112,36 @@ const styles = `
     top: 50%;
     transform: translateY(-50%);
     color: #9333ea;
+    pointer-events: none;
   }
 
-  .search-stats {
+  .clear-search {
+    position: absolute;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #6b7280;
+    cursor: pointer;
+    padding: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.3s;
+  }
+
+  .clear-search:hover {
+    background: #f3f4f6;
+    color: #ef4444;
+  }
+
+  .search-results-info {
     text-align: center;
     margin-top: 0.5rem;
-    color: #6b7280;
     font-size: 0.875rem;
+    color: #6b7280;
   }
 
   .stats-grid {
@@ -342,28 +356,27 @@ const styles = `
     color: #4b5563;
     font-size: 0.875rem;
     margin-bottom: 0.5rem;
-    max-height: 3.5em;
+    max-height: 60px;
     overflow-y: auto;
-    line-height: 1.4;
     padding-right: 0.5rem;
   }
 
   .item-description::-webkit-scrollbar {
-    width: 4px;
+    width: 6px;
   }
 
   .item-description::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 2px;
+    background: #f1f5f9;
+    border-radius: 10px;
   }
 
   .item-description::-webkit-scrollbar-thumb {
-    background: #c4b5fd;
-    border-radius: 2px;
+    background: #9333ea;
+    border-radius: 10px;
   }
 
   .item-description::-webkit-scrollbar-thumb:hover {
-    background: #9333ea;
+    background: #7c3aed;
   }
 
   .item-meta {
@@ -661,7 +674,6 @@ const styles = `
     50% { opacity: 0.5; }
   }
 
-  /* ==== ACTIONS EN COLONNES ==== */
   .item-card-inner.is-action .item-title,
   .item-card-inner.is-action .item-description,
   .item-card-inner.is-action .item-meta {
@@ -710,42 +722,28 @@ const styles = `
     font-weight: 500;
     color: #6b7280;
     font-size: 0.875rem;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    margin-top: 0.25rem;
-  }
-
-  /* NOUVELLE DESCRIPTION SCROLLABLE POUR LES ACTIONS */
-  .action-description-full {
-    color: #4b5563;
-    font-size: 0.875rem;
-    line-height: 1.4;
-    max-height: 80px;
+    max-height: 40px;
     overflow-y: auto;
-    padding: 0.5rem;
-    background: rgba(255, 255, 255, 0.7);
-    border-radius: 0.5rem;
-    margin-top: 0.5rem;
-    border: 1px solid #e5e7eb;
+    margin-top: 0.25rem;
+    padding-right: 0.5rem;
   }
 
-  .action-description-full::-webkit-scrollbar {
-    width: 6px;
+  .action-desc::-webkit-scrollbar {
+    width: 4px;
   }
 
-  .action-description-full::-webkit-scrollbar-track {
+  .action-desc::-webkit-scrollbar-track {
     background: #f1f5f9;
-    border-radius: 3px;
+    border-radius: 10px;
   }
 
-  .action-description-full::-webkit-scrollbar-thumb {
-    background: #c4b5fd;
-    border-radius: 3px;
-  }
-
-  .action-description-full::-webkit-scrollbar-thumb:hover {
+  .action-desc::-webkit-scrollbar-thumb {
     background: #9333ea;
+    border-radius: 10px;
+  }
+
+  .action-desc::-webkit-scrollbar-thumb:hover {
+    background: #7c3aed;
   }
 
   .action-col.resp .meta-icon.user { color: #6366f1; }
@@ -757,7 +755,6 @@ const styles = `
     white-space: nowrap;
   }
 
-  /* Responsive design pour les écrans moyens */
   @media (max-width: 1024px) {
     .action-row {
       grid-template-columns: 1.5fr 1fr 1fr auto;
@@ -765,7 +762,6 @@ const styles = `
     }
   }
 
-  /* Responsive design pour les petits écrans */
   @media (max-width: 768px) {
     .action-row {
       grid-template-columns: 1fr;
@@ -786,31 +782,8 @@ const styles = `
     .action-col.status {
       justify-content: flex-start;
     }
-
-    .header-with-logo {
-      flex-direction: column;
-      gap: 0.5rem;
-    }
-
-    .header h1 {
-      font-size: 2.5rem;
-    }
-
-    .logo-corner {
-      position: relative;
-      top: 0;
-      left: 0;
-      text-align: center;
-      margin-bottom: 1rem;
-    }
-
-    .logo-image {
-      width: 60px;
-      height: 60px;
-    }
   }
 
-  /* Pour les très petits écrans */
   @media (max-width: 480px) {
     .action-row {
       gap: 0.5rem;
@@ -827,20 +800,6 @@ const styles = `
     .action-desc {
       font-size: 0.8rem;
     }
-
-    .container {
-      padding: 1rem 0.5rem;
-    }
-
-    .main-content {
-      padding: 1.5rem 1rem;
-    }
-  }
-
-  .highlight {
-    background-color: #fef3c7;
-    padding: 0.1rem 0.2rem;
-    border-radius: 0.25rem;
   }
 `;
 
@@ -850,9 +809,6 @@ const StatusBadge = ({ status }) => {
     closed: { text: 'Closed', className: 'closed' },
     open: { text: 'Open', className: 'open' },
     overdue: { text: 'Overdue', className: 'overdue' },
-    new: { text: 'New', className: 'new' },
-    in_progress: { text: 'In Progress', className: 'in_progress' },
-    completed: { text: 'Completed', className: 'completed' }
   };
   
   const normalizedStatus = status ? status.toLowerCase() : 'new';
@@ -865,27 +821,10 @@ const StatusBadge = ({ status }) => {
   );
 };
 
-const HighlightText = ({ text, searchTerm }) => {
-  if (!searchTerm || !text) return text;
-  
-  const regex = new RegExp(`(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-  const parts = text.split(regex);
-  
-  return parts.map((part, index) =>
-    regex.test(part) ? (
-      <mark key={index} className="highlight">{part}</mark>
-    ) : (
-      part
-    )
-  );
-};
-
-// Unified component for both topics (sujets) and actions
-const ItemCard = ({ item, type = 'sujet', depth = 0, sujetDepth = 0, actionDepth = 0, searchTerm = '' }) => {
+const ItemCard = ({ item, type = 'sujet', depth = 0, sujetDepth = 0, actionDepth = 0 }) => {
   const [expanded, setExpanded] = useState(false);
   const [children, setChildren] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [showFullDescription, setShowFullDescription] = useState(false);
 
   const isSujet = type === 'sujet';
   const isAction = type === 'action';
@@ -972,21 +911,15 @@ const ItemCard = ({ item, type = 'sujet', depth = 0, sujetDepth = 0, actionDepth
               </div>
               
               <div className="item-info">
-                {/* TOPIC: title/desc */}
                 {isSujet && (
                   <>
-                    <h3 className="item-title">
-                      <HighlightText text={item.titre} searchTerm={searchTerm} />
-                    </h3>
+                    <h3 className="item-title">{item.titre}</h3>
                     {item.description && (
-                      <div className="item-description">
-                        <HighlightText text={item.description} searchTerm={searchTerm} />
-                      </div>
+                      <p className="item-description">{item.description}</p>
                     )}
                   </>
                 )}
 
-                {/* TOPIC: stats */}
                 {isSujet && item.total_actions > 0 && (
                   <div>
                     <div className="item-stats">
@@ -1007,58 +940,35 @@ const ItemCard = ({ item, type = 'sujet', depth = 0, sujetDepth = 0, actionDepth
                   </div>
                 )}
 
-                {/* ACTION: 4-column layout */}
                 {isAction && (
-                  <>
-                    <div className="action-row">
-                      {/* 1) Name */}
-                      <div className="action-col name">
-                        <div className="action-title-container">
-                          <span className="action-title">
-                            <HighlightText text={item.titre} searchTerm={searchTerm} />
-                          </span>
-                          {item.description && (
-                            <span className="action-desc">
-                              <HighlightText 
-                                text={item.description.length > 100 ? `${item.description.substring(0, 100)}...` : item.description} 
-                                searchTerm={searchTerm} 
-                              />
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* 2) Owner */}
-                      <div className="action-col resp">
-                        <User size={16} className="meta-icon user" />
-                        <span>
-                          <HighlightText text={item.responsable || '—'} searchTerm={searchTerm} />
-                        </span>
-                      </div>
-
-                      {/* 3) Due date */}
-                      <div className="action-col date">
-                        <Calendar size={16} className="meta-icon calendar" />
-                        <span>
-                          {item.due_date
-                            ? new Date(item.due_date).toLocaleDateString('en-GB')
-                            : '—'}
-                        </span>
-                      </div>
-
-                      {/* 4) Status */}
-                      <div className="action-col status">
-                        <StatusBadge status={item.status} />
+                  <div className="action-row">
+                    <div className="action-col name">
+                      <div className="action-title-container">
+                        <span className="action-title">{item.titre}</span>
+                        {item.description && (
+                          <span className="action-desc">{item.description}</span>
+                        )}
                       </div>
                     </div>
 
-                    {/* DESCRIPTION COMPLÈTE SCROLLABLE POUR LES ACTIONS */}
-                    {item.description && item.description.length > 100 && (
-                      <div className="action-description-full">
-                        <HighlightText text={item.description} searchTerm={searchTerm} />
-                      </div>
-                    )}
-                  </>
+                    <div className="action-col resp">
+                      <User size={16} className="meta-icon user" />
+                      <span>{item.responsable || '—'}</span>
+                    </div>
+
+                    <div className="action-col date">
+                      <Calendar size={16} className="meta-icon calendar" />
+                      <span>
+                        {item.due_date
+                          ? new Date(item.due_date).toLocaleDateString('en-GB')
+                          : '—'}
+                      </span>
+                    </div>
+
+                    <div className="action-col status">
+                      <StatusBadge status={item.status} />
+                    </div>
+                  </div>
                 )}
               </div>
             </div>
@@ -1086,7 +996,6 @@ const ItemCard = ({ item, type = 'sujet', depth = 0, sujetDepth = 0, actionDepth
                       depth={0}
                       sujetDepth={sujetDepth + 1}
                       actionDepth={0}
-                      searchTerm={searchTerm}
                     />
                   ))}
                 </div>
@@ -1108,7 +1017,6 @@ const ItemCard = ({ item, type = 'sujet', depth = 0, sujetDepth = 0, actionDepth
                       depth={0}
                       sujetDepth={sujetDepth}
                       actionDepth={actionDepth + 1}
-                      searchTerm={searchTerm}
                     />
                   ))}
                 </div>
@@ -1137,22 +1045,36 @@ const ItemCard = ({ item, type = 'sujet', depth = 0, sujetDepth = 0, actionDepth
 
 const App = () => {
   const [sujets, setSujets] = useState([]);
-  const [filteredSujets, setFilteredSujets] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-
-  // URL du logo professionnel - vous pouvez remplacer par votre propre URL
-  const logoUrl = "https://images.unsplash.com/photo-1556655848-f3a7049761a6?w=400&h=400&fit=crop&crop=center";
+  const [filteredSujets, setFilteredSujets] = useState([]);
 
   useEffect(() => {
     fetchData();
   }, []);
 
   useEffect(() => {
-    filterItems();
+    if (searchTerm.trim() === '') {
+      setFilteredSujets(sujets);
+    } else {
+      const term = searchTerm.toLowerCase();
+      const filtered = filterItems(sujets, term);
+      setFilteredSujets(filtered);
+    }
   }, [searchTerm, sujets]);
+
+  const filterItems = (items, term) => {
+    return items.filter(item => {
+      const titleMatch = item.titre?.toLowerCase().includes(term);
+      const descMatch = item.description?.toLowerCase().includes(term);
+      const respMatch = item.responsable?.toLowerCase().includes(term);
+      const statusMatch = item.status?.toLowerCase().includes(term);
+      
+      return titleMatch || descMatch || respMatch || statusMatch;
+    });
+  };
 
   const fetchData = async () => {
     try {
@@ -1178,51 +1100,8 @@ const App = () => {
     }
   };
 
-  const filterItems = () => {
-    if (!searchTerm.trim()) {
-      setFilteredSujets(sujets);
-      return;
-    }
-
-    const searchLower = searchTerm.toLowerCase();
-    
-    const filterItem = (item) => {
-      const matches = 
-        item.titre?.toLowerCase().includes(searchLower) ||
-        item.description?.toLowerCase().includes(searchLower) ||
-        (item.itemType === 'action' && (
-          item.responsable?.toLowerCase().includes(searchLower) ||
-          item.status?.toLowerCase().includes(searchLower)
-        ));
-
-      return matches;
-    };
-
-    const filterNestedItems = (items) => {
-      return items.filter(item => {
-        const itemMatches = filterItem(item);
-        if (itemMatches) return true;
-
-        if (item.children && item.children.length > 0) {
-          const filteredChildren = filterNestedItems(item.children);
-          return filteredChildren.length > 0;
-        }
-
-        return false;
-      });
-    };
-
-    const filtered = filterNestedItems(sujets);
-    setFilteredSujets(filtered);
-  };
-
-  const getSearchStats = () => {
-    if (!searchTerm.trim()) return null;
-    
-    const totalItems = sujets.length;
-    const filteredItems = filteredSujets.length;
-    
-    return `${filteredItems} résultat(s) sur ${totalItems}`;
+  const handleClearSearch = () => {
+    setSearchTerm('');
   };
 
   if (loading) {
@@ -1262,42 +1141,38 @@ const App = () => {
     <>
       <style>{styles}</style>
       <div className="app-container">
-        {/* Logo professionnel dans le coin */}
-        <div className="logo-corner">
-          <img 
-            src={logoUrl} 
-            alt="Company Logo" 
-            className="logo-image"
-            onError={(e) => {
-              // Fallback si l'image ne charge pas
-              e.target.style.display = 'none';
-            }}
-          />
-        </div>
-
         <div className="container">
           <header className="header">
-            <div className="header-with-logo">
-              <h1>Action Plan Management</h1>
+            <div className="logo-container">
+              <div className="logo">📋</div>
             </div>
+            <h1>Action Plan Management</h1>
             <p>View and manage your projects and actions</p>
           </header>
 
-          {/* Barre de recherche professionnelle */}
-          <div className="search-section">
-            <div className="search-container">
+          <div className="search-container">
+            <div className="search-wrapper">
               <Search size={20} className="search-icon" />
               <input
                 type="text"
                 className="search-input"
-                placeholder="Rechercher par nom, description, responsable, statut..."
+                placeholder="Rechercher par nom, responsable, statut, description..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
+              {searchTerm && (
+                <button 
+                  className="clear-search" 
+                  onClick={handleClearSearch}
+                  aria-label="Clear search"
+                >
+                  <X size={20} />
+                </button>
+              )}
             </div>
-            {getSearchStats() && (
-              <div className="search-stats">
-                {getSearchStats()}
+            {searchTerm && (
+              <div className="search-results-info">
+                {filteredSujets.length} résultat{filteredSujets.length !== 1 ? 's' : ''} trouvé{filteredSujets.length !== 1 ? 's' : ''}
               </div>
             )}
           </div>
@@ -1349,29 +1224,25 @@ const App = () => {
           <div className="main-content">
             <h2 className="main-title">
               <FolderOpen className="main-title-icon" size={32} />
-              {searchTerm ? 'Résultats de la recherche' : 'All Topics'}
+              {searchTerm ? 'Résultats de recherche' : 'All Topics'}
               <span className="main-title-count">({filteredSujets.length})</span>
             </h2>
             
             {filteredSujets.length > 0 ? (
               <div>
                 {filteredSujets.map((sujet) => (
-                  <ItemCard 
-                    key={sujet.id} 
-                    item={sujet} 
-                    type="sujet" 
-                    sujetDepth={0} 
-                    actionDepth={0}
-                    searchTerm={searchTerm}
-                  />
+                  <ItemCard key={sujet.id} item={sujet} type="sujet" sujetDepth={0} actionDepth={0} />
                 ))}
+              </div>
+            ) : searchTerm ? (
+              <div className="empty-state">
+                <Search size={64} className="empty-icon" />
+                <p className="empty-text">Aucun résultat trouvé pour "{searchTerm}"</p>
               </div>
             ) : (
               <div className="empty-state">
                 <Folder size={64} className="empty-icon" />
-                <p className="empty-text">
-                  {searchTerm ? 'Aucun résultat trouvé pour votre recherche' : 'No topics found'}
-                </p>
+                <p className="empty-text">No topics found</p>
               </div>
             )}
           </div>
