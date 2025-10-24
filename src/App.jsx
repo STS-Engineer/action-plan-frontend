@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronRight, ChevronDown, FolderOpen, Folder, CheckCircle2, Clock, AlertCircle, Calendar, User, FileText } from 'lucide-react';
+import { ChevronRight, ChevronDown, FolderOpen, Folder, CheckCircle2, Clock, AlertCircle, Calendar, User, FileText, Search } from 'lucide-react';
 
 const API_URL = 'https://ap-back.azurewebsites.net/api';
 
@@ -34,6 +34,27 @@ const styles = `
     animation: fadeIn 0.6s ease-out;
   }
 
+  .header-with-logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .logo {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #9333ea, #ec4899, #6366f1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    color: white;
+    box-shadow: 0 4px 15px rgba(147, 51, 234, 0.3);
+  }
+
   .header h1 {
     font-size: 3rem;
     font-weight: 900;
@@ -48,6 +69,56 @@ const styles = `
   .header p {
     color: #4b5563;
     font-size: 1.125rem;
+  }
+
+  .search-section {
+    margin-bottom: 2rem;
+    animation: slideIn 0.5s ease-out;
+  }
+
+  .search-container {
+    position: relative;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  .search-input {
+    width: 100%;
+    padding: 1rem 1rem 1rem 3rem;
+    border: none;
+    border-radius: 1rem;
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+  }
+
+  .search-input:focus {
+    outline: none;
+    border-color: #9333ea;
+    box-shadow: 0 10px 25px -5px rgba(147, 51, 234, 0.2);
+    transform: translateY(-2px);
+  }
+
+  .search-input::placeholder {
+    color: #9ca3af;
+  }
+
+  .search-icon {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #9333ea;
+  }
+
+  .search-stats {
+    text-align: center;
+    margin-top: 0.5rem;
+    color: #6b7280;
+    font-size: 0.875rem;
   }
 
   .stats-grid {
@@ -262,6 +333,28 @@ const styles = `
     color: #4b5563;
     font-size: 0.875rem;
     margin-bottom: 0.5rem;
+    max-height: 3.5em;
+    overflow-y: auto;
+    line-height: 1.4;
+    padding-right: 0.5rem;
+  }
+
+  .item-description::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .item-description::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 2px;
+  }
+
+  .item-description::-webkit-scrollbar-thumb {
+    background: #c4b5fd;
+    border-radius: 2px;
+  }
+
+  .item-description::-webkit-scrollbar-thumb:hover {
+    background: #9333ea;
   }
 
   .item-meta {
@@ -560,7 +653,6 @@ const styles = `
   }
 
   /* ==== ACTIONS EN COLONNES (Nom, Responsable, Date, Statut) ==== */
-  /* On masque l'ancien rendu (titre/desc/meta) des actions, MAIS PAS le badge */
   .item-card-inner.is-action .item-title,
   .item-card-inner.is-action .item-description,
   .item-card-inner.is-action .item-meta {
@@ -569,7 +661,7 @@ const styles = `
 
   .action-row {
     display: grid;
-    grid-template-columns: 2fr 1fr 1fr auto; /* Plus d'espace pour le nom */
+    grid-template-columns: 2fr 1fr 1fr auto;
     gap: 1.5rem;
     align-items: center;
     padding-top: 0.25rem;
@@ -615,11 +707,9 @@ const styles = `
     margin-top: 0.25rem;
   }
 
-  /* couleurs d'icônes restantes (user/date) */
   .action-col.resp .meta-icon.user { color: #6366f1; }
   .action-col.date .meta-icon.calendar { color: #ec4899; }
 
-  /* Badge de statut dans la 4e colonne */
   .action-col.status .status-badge {
     display: inline-flex;
     margin-top: 0;
@@ -655,6 +745,15 @@ const styles = `
     .action-col.status {
       justify-content: flex-start;
     }
+
+    .header-with-logo {
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .header h1 {
+      font-size: 2.5rem;
+    }
   }
 
   /* Pour les très petits écrans */
@@ -674,21 +773,34 @@ const styles = `
     .action-desc {
       font-size: 0.8rem;
     }
+
+    .container {
+      padding: 1rem 0.5rem;
+    }
+
+    .main-content {
+      padding: 1.5rem 1rem;
+    }
+  }
+
+  .highlight {
+    background-color: #fef3c7;
+    padding: 0.1rem 0.2rem;
+    border-radius: 0.25rem;
   }
 `;
 
 const StatusBadge = ({ status }) => {
   const statusConfig = {
-    // Statuts de la base de données avec les couleurs demandées
     blocked: { text: 'Blocked', className: 'blocked' },
     closed: { text: 'Closed', className: 'closed' },
     open: { text: 'Open', className: 'open' },
     overdue: { text: 'Overdue', className: 'overdue' },
-    
-    
+    new: { text: 'New', className: 'new' },
+    in_progress: { text: 'In Progress', className: 'in_progress' },
+    completed: { text: 'Completed', className: 'completed' }
   };
   
-  // Utiliser directement le statut de la base de données
   const normalizedStatus = status ? status.toLowerCase() : 'new';
   const config = statusConfig[normalizedStatus] || statusConfig.new;
   
@@ -699,8 +811,24 @@ const StatusBadge = ({ status }) => {
   );
 };
 
+// Fonction pour mettre en évidence le texte de recherche
+const HighlightText = ({ text, searchTerm }) => {
+  if (!searchTerm || !text) return text;
+  
+  const regex = new RegExp(`(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+  const parts = text.split(regex);
+  
+  return parts.map((part, index) =>
+    regex.test(part) ? (
+      <mark key={index} className="highlight">{part}</mark>
+    ) : (
+      part
+    )
+  );
+};
+
 // Unified component for both topics (sujets) and actions
-const ItemCard = ({ item, type = 'sujet', depth = 0, sujetDepth = 0, actionDepth = 0 }) => {
+const ItemCard = ({ item, type = 'sujet', depth = 0, sujetDepth = 0, actionDepth = 0, searchTerm = '' }) => {
   const [expanded, setExpanded] = useState(false);
   const [children, setChildren] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -714,7 +842,6 @@ const ItemCard = ({ item, type = 'sujet', depth = 0, sujetDepth = 0, actionDepth
     
     try {
       if (isSujet) {
-        // For a topic: load sub-topics and actions
         const [sousSujetsRes, actionsRes] = await Promise.all([
           fetch(`${API_URL}/sujets/${item.id}/sous-sujets`),
           fetch(`${API_URL}/sujets/${item.id}/actions`)
@@ -722,14 +849,12 @@ const ItemCard = ({ item, type = 'sujet', depth = 0, sujetDepth = 0, actionDepth
         const sousSujets = await sousSujetsRes.json();
         const actions = await actionsRes.json();
         
-        // Combine sub-topics & actions
         const allChildren = [
           ...sousSujets.map(s => ({ ...s, itemType: 'sujet' })),
           ...actions.map(a => ({ ...a, itemType: 'action' }))
         ];
         setChildren(allChildren);
       } else if (isAction) {
-        // For an action: only load sub-actions
         const response = await fetch(`${API_URL}/actions/${item.id}/sous-actions`);
         const sousActions = await response.json();
         setChildren(sousActions.map(sa => ({ ...sa, itemType: 'action' })));
@@ -758,7 +883,6 @@ const ItemCard = ({ item, type = 'sujet', depth = 0, sujetDepth = 0, actionDepth
   const priorityClass = isAction && item.priorite ? `priority-${item.priorite}` : '';
   const typeClass = isSujet ? 'is-sujet' : 'is-action';
 
-  // Determine hierarchy labels
   const getSujetLabel = (depth) => {
     const labels = ['Sujet', 'Sous-sujet', 'Sous-sous-sujet', 'Sous-sous-sous-sujet'];
     return labels[Math.min(depth, labels.length - 1)];
@@ -769,7 +893,6 @@ const ItemCard = ({ item, type = 'sujet', depth = 0, sujetDepth = 0, actionDepth
     return labels[Math.min(depth, labels.length - 1)];
   };
 
-  // Separate children by type
   const sujetChildren = children.filter(c => c.itemType === 'sujet');
   const actionChildren = children.filter(c => c.itemType === 'action');
 
@@ -798,9 +921,13 @@ const ItemCard = ({ item, type = 'sujet', depth = 0, sujetDepth = 0, actionDepth
                 {/* TOPIC: title/desc */}
                 {isSujet && (
                   <>
-                    <h3 className="item-title">{item.titre}</h3>
+                    <h3 className="item-title">
+                      <HighlightText text={item.titre} searchTerm={searchTerm} />
+                    </h3>
                     {item.description && (
-                      <p className="item-description">{item.description}</p>
+                      <div className="item-description">
+                        <HighlightText text={item.description} searchTerm={searchTerm} />
+                      </div>
                     )}
                   </>
                 )}
@@ -829,12 +956,16 @@ const ItemCard = ({ item, type = 'sujet', depth = 0, sujetDepth = 0, actionDepth
                 {/* ACTION: 4-column layout */}
                 {isAction && (
                   <div className="action-row">
-                    {/* 1) Name - Maintenant avec plus d'espace */}
+                    {/* 1) Name */}
                     <div className="action-col name">
                       <div className="action-title-container">
-                        <span className="action-title">{item.titre}</span>
+                        <span className="action-title">
+                          <HighlightText text={item.titre} searchTerm={searchTerm} />
+                        </span>
                         {item.description && (
-                          <span className="action-desc">{item.description}</span>
+                          <span className="action-desc">
+                            <HighlightText text={item.description} searchTerm={searchTerm} />
+                          </span>
                         )}
                       </div>
                     </div>
@@ -842,7 +973,9 @@ const ItemCard = ({ item, type = 'sujet', depth = 0, sujetDepth = 0, actionDepth
                     {/* 2) Owner */}
                     <div className="action-col resp">
                       <User size={16} className="meta-icon user" />
-                      <span>{item.responsable || '—'}</span>
+                      <span>
+                        <HighlightText text={item.responsable || '—'} searchTerm={searchTerm} />
+                      </span>
                     </div>
 
                     {/* 3) Due date */}
@@ -855,7 +988,7 @@ const ItemCard = ({ item, type = 'sujet', depth = 0, sujetDepth = 0, actionDepth
                       </span>
                     </div>
 
-                    {/* 4) Status - Utilise directement item.status de la base de données */}
+                    {/* 4) Status */}
                     <div className="action-col status">
                       <StatusBadge status={item.status} />
                     </div>
@@ -872,7 +1005,6 @@ const ItemCard = ({ item, type = 'sujet', depth = 0, sujetDepth = 0, actionDepth
 
         {expanded && children.length > 0 && (
           <div className="item-children">
-            {/* Show sub-topics first if any */}
             {sujetChildren.length > 0 && (
               <>
                 <h5 className="children-title">
@@ -888,13 +1020,13 @@ const ItemCard = ({ item, type = 'sujet', depth = 0, sujetDepth = 0, actionDepth
                       depth={0}
                       sujetDepth={sujetDepth + 1}
                       actionDepth={0}
+                      searchTerm={searchTerm}
                     />
                   ))}
                 </div>
               </>
             )}
             
-            {/* Show actions */}
             {actionChildren.length > 0 && (
               <>
                 <h5 className="children-title" style={sujetChildren.length > 0 ? { marginTop: '1rem' } : {}}>
@@ -910,6 +1042,7 @@ const ItemCard = ({ item, type = 'sujet', depth = 0, sujetDepth = 0, actionDepth
                       depth={0}
                       sujetDepth={sujetDepth}
                       actionDepth={actionDepth + 1}
+                      searchTerm={searchTerm}
                     />
                   ))}
                 </div>
@@ -938,13 +1071,19 @@ const ItemCard = ({ item, type = 'sujet', depth = 0, sujetDepth = 0, actionDepth
 
 const App = () => {
   const [sujets, setSujets] = useState([]);
+  const [filteredSujets, setFilteredSujets] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     fetchData();
   }, []);
+
+  useEffect(() => {
+    filterItems();
+  }, [searchTerm, sujets]);
 
   const fetchData = async () => {
     try {
@@ -961,12 +1100,61 @@ const App = () => {
       const statsData = await statsRes.json();
       
       setSujets(sujetsData);
+      setFilteredSujets(sujetsData);
       setStats(statsData);
       setLoading(false);
     } catch (err) {
       setError(err.message);
       setLoading(false);
     }
+  };
+
+  const filterItems = () => {
+    if (!searchTerm.trim()) {
+      setFilteredSujets(sujets);
+      return;
+    }
+
+    const searchLower = searchTerm.toLowerCase();
+    
+    const filterItem = (item) => {
+      const matches = 
+        item.titre?.toLowerCase().includes(searchLower) ||
+        item.description?.toLowerCase().includes(searchLower) ||
+        (item.itemType === 'action' && (
+          item.responsable?.toLowerCase().includes(searchLower) ||
+          item.status?.toLowerCase().includes(searchLower)
+        ));
+
+      return matches;
+    };
+
+    const filterNestedItems = (items) => {
+      return items.filter(item => {
+        const itemMatches = filterItem(item);
+        if (itemMatches) return true;
+
+        // Vérifier récursivement les enfants
+        if (item.children && item.children.length > 0) {
+          const filteredChildren = filterNestedItems(item.children);
+          return filteredChildren.length > 0;
+        }
+
+        return false;
+      });
+    };
+
+    const filtered = filterNestedItems(sujets);
+    setFilteredSujets(filtered);
+  };
+
+  const getSearchStats = () => {
+    if (!searchTerm.trim()) return null;
+    
+    const totalItems = sujets.length;
+    const filteredItems = filteredSujets.length;
+    
+    return `${filteredItems} résultat(s) sur ${totalItems}`;
   };
 
   if (loading) {
@@ -1008,9 +1196,31 @@ const App = () => {
       <div className="app-container">
         <div className="container">
           <header className="header">
-            <h1>📋 Action Plan Management </h1>
+            <div className="header-with-logo">
+              <div className="logo">📋</div>
+              <h1>Action Plan Management</h1>
+            </div>
             <p>View and manage your projects and actions</p>
           </header>
+
+          {/* Barre de recherche professionnelle */}
+          <div className="search-section">
+            <div className="search-container">
+              <Search size={20} className="search-icon" />
+              <input
+                type="text"
+                className="search-input"
+                placeholder="Rechercher par nom, description, responsable, statut..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            {getSearchStats() && (
+              <div className="search-stats">
+                {getSearchStats()}
+              </div>
+            )}
+          </div>
 
           {stats && (
             <div className="stats-grid">
@@ -1059,20 +1269,29 @@ const App = () => {
           <div className="main-content">
             <h2 className="main-title">
               <FolderOpen className="main-title-icon" size={32} />
-              All Topics
-              <span className="main-title-count">({sujets.length})</span>
+              {searchTerm ? 'Résultats de la recherche' : 'All Topics'}
+              <span className="main-title-count">({filteredSujets.length})</span>
             </h2>
             
-            {sujets.length > 0 ? (
+            {filteredSujets.length > 0 ? (
               <div>
-                {sujets.map((sujet) => (
-                  <ItemCard key={sujet.id} item={sujet} type="sujet" sujetDepth={0} actionDepth={0} />
+                {filteredSujets.map((sujet) => (
+                  <ItemCard 
+                    key={sujet.id} 
+                    item={sujet} 
+                    type="sujet" 
+                    sujetDepth={0} 
+                    actionDepth={0}
+                    searchTerm={searchTerm}
+                  />
                 ))}
               </div>
             ) : (
               <div className="empty-state">
                 <Folder size={64} className="empty-icon" />
-                <p className="empty-text">No topics found</p>
+                <p className="empty-text">
+                  {searchTerm ? 'Aucun résultat trouvé pour votre recherche' : 'No topics found'}
+                </p>
               </div>
             )}
           </div>
