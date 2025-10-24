@@ -495,45 +495,51 @@ const styles = `
     margin-left: 1.5rem;
   }
 
-  .action-row {
-    display: grid;
-    grid-template-columns: 2fr 1fr 1fr auto;
-    gap: 1.5rem;
-    align-items: center;
-    padding-top: 0.25rem;
+  /* Styles pour le tableau des actions */
+  .actions-table {
     width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
   }
 
-  .action-col {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    min-width: 0;
+  .actions-table th {
+    background: #f8fafc;
+    padding: 0.75rem 1rem;
+    text-align: left;
+    font-weight: 600;
+    color: #374151;
+    border-bottom: 2px solid #e5e7eb;
+    font-size: 0.875rem;
+  }
+
+  .actions-table td {
+    padding: 1rem;
+    border-bottom: 1px solid #e5e7eb;
+    vertical-align: top;
+  }
+
+  .actions-table tr:hover {
+    background: #f9fafb;
   }
 
   .action-title-container {
     display: flex;
     flex-direction: column;
     min-width: 0;
-    flex: 1;
   }
 
   .action-title {
     font-weight: 700;
     color: #111827;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    margin-bottom: 0.25rem;
   }
 
   .action-desc {
-    font-weight: 400;
     color: #6b7280;
     font-size: 0.875rem;
     max-height: 60px;
     overflow-y: auto;
     padding-right: 0.5rem;
-    margin-top: 0.25rem;
   }
 
   .action-desc::-webkit-scrollbar {
@@ -550,10 +556,16 @@ const styles = `
     border-radius: 2px;
   }
 
-  .item-card-inner.is-action .item-title,
-  .item-card-inner.is-action .item-description,
-  .item-card-inner.is-action .item-meta {
-    display: none;
+  .closed-date-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+    color: #6b7280;
+    margin-top: 0.5rem;
+    padding: 0.25rem 0.5rem;
+    background: #f3f4f6;
+    border-radius: 0.25rem;
   }
 
   .loading-container {
@@ -668,9 +680,13 @@ const styles = `
   }
 
   @media (max-width: 1024px) {
-    .action-row {
-      grid-template-columns: 1.5fr 1fr 1fr auto;
-      gap: 1rem;
+    .actions-table {
+      font-size: 0.875rem;
+    }
+    
+    .actions-table th,
+    .actions-table td {
+      padding: 0.5rem;
     }
   }
 
@@ -680,13 +696,12 @@ const styles = `
       gap: 1rem;
     }
 
-    .action-row {
-      grid-template-columns: 1fr;
-      gap: 0.75rem;
+    .actions-table-container {
+      overflow-x: auto;
     }
     
-    .action-col {
-      justify-content: flex-start;
+    .actions-table {
+      min-width: 800px;
     }
   }
 `;
@@ -739,6 +754,86 @@ const StatusBadge = ({ status, onStatusChange, actionId }) => {
           </div>
         </div>
       )}
+    </div>
+  );
+};
+
+const ActionsTable = ({ actions, onStatusChange }) => {
+  if (!actions || actions.length === 0) {
+    return <p className="no-items">Aucune action trouvée</p>;
+  }
+
+  return (
+    <div className="actions-table-container">
+      <table className="actions-table">
+        <thead>
+          <tr>
+            <th>Nom</th>
+            <th>Responsable</th>
+            <th>Date d'ouverture</th>
+            <th>Date d'échéance</th>
+            <th>Date de fermeture</th>
+            <th>Statut</th>
+          </tr>
+        </thead>
+        <tbody>
+          {actions.map((action) => (
+            <tr key={action.id}>
+              <td>
+                <div className="action-title-container">
+                  <span className="action-title">{action.titre}</span>
+                  {action.description && (
+                    <div className="action-desc">{action.description}</div>
+                  )}
+                </div>
+              </td>
+              <td>
+                <div className="meta-item">
+                  <User size={16} className="meta-icon user" />
+                  <span>{action.responsable || '—'}</span>
+                </div>
+              </td>
+              <td>
+                <div className="meta-item">
+                  <Calendar size={16} className="meta-icon calendar" />
+                  <span>
+                    {action.created_date
+                      ? new Date(action.created_date).toLocaleDateString('fr-FR')
+                      : '—'}
+                  </span>
+                </div>
+              </td>
+              <td>
+                <div className="meta-item">
+                  <Calendar size={16} className="meta-icon calendar" />
+                  <span>
+                    {action.due_date
+                      ? new Date(action.due_date).toLocaleDateString('fr-FR')
+                      : '—'}
+                  </span>
+                </div>
+              </td>
+              <td>
+                <div className="meta-item">
+                  <Calendar size={16} className="meta-icon calendar" />
+                  <span>
+                    {action.closed_date
+                      ? new Date(action.closed_date).toLocaleDateString('fr-FR')
+                      : '—'}
+                  </span>
+                </div>
+              </td>
+              <td>
+                <StatusBadge 
+                  status={action.status} 
+                  actionId={action.id}
+                  onStatusChange={onStatusChange}
+                />
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 };
@@ -860,23 +955,17 @@ const ItemCard = ({ item, type = 'sujet', depth = 0, sujetDepth = 0, actionDepth
                 )}
 
                 {isAction && (
-                  <>
-                    <div className="action-row">
-                      <div className="action-col name">
-                        <div className="action-title-container">
-                          <span className="action-title">{item.titre}</span>
-                          {item.description && (
-                            <div className="action-desc">{item.description}</div>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="action-col resp">
+                  <div className="action-title-container">
+                    <span className="action-title">{item.titre}</span>
+                    {item.description && (
+                      <div className="action-desc">{item.description}</div>
+                    )}
+                    <div className="item-meta">
+                      <div className="meta-item">
                         <User size={16} className="meta-icon user" />
                         <span>{item.responsable || '—'}</span>
                       </div>
-
-                      <div className="action-col date">
+                      <div className="meta-item">
                         <Calendar size={16} className="meta-icon calendar" />
                         <span>
                           {item.due_date
@@ -884,8 +973,7 @@ const ItemCard = ({ item, type = 'sujet', depth = 0, sujetDepth = 0, actionDepth
                             : '—'}
                         </span>
                       </div>
-
-                      <div className="action-col status">
+                      <div className="meta-item">
                         <StatusBadge 
                           status={item.status} 
                           actionId={item.id}
@@ -896,10 +984,10 @@ const ItemCard = ({ item, type = 'sujet', depth = 0, sujetDepth = 0, actionDepth
                     {item.closed_date && item.status === 'closed' && (
                       <div className="closed-date-info">
                         <Clock size={14} />
-                        <span>Fermée le: {new Date(item.closed_date).toLocaleDateString('fr-FR')} à {new Date(item.closed_date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
+                        <span>Fermée le: {new Date(item.closed_date).toLocaleDateString('fr-FR')}</span>
                       </div>
                     )}
-                  </>
+                  </div>
                 )}
               </div>
             </div>
@@ -941,17 +1029,10 @@ const ItemCard = ({ item, type = 'sujet', depth = 0, sujetDepth = 0, actionDepth
                   {getActionLabel(actionDepth)} ({actionChildren.length})
                 </h5>
                 <div className="nested-items">
-                  {actionChildren.map((child) => (
-                    <ItemCard 
-                      key={`${child.itemType}-${child.id}`} 
-                      item={child} 
-                      type={child.itemType}
-                      depth={0}
-                      sujetDepth={sujetDepth}
-                      actionDepth={actionDepth + 1}
-                      onStatusChange={onStatusChange}
-                    />
-                  ))}
+                  <ActionsTable 
+                    actions={actionChildren} 
+                    onStatusChange={onStatusChange}
+                  />
                 </div>
               </>
             )}
