@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronRight, ChevronDown, FolderOpen, Folder, CheckCircle2, Clock, AlertCircle, Calendar, User, FileText, Search, X } from 'lucide-react';
+import { ChevronRight, ChevronDown, FolderOpen, Folder, CheckCircle2, Clock, AlertCircle, Calendar, User, FileText, Search, Edit2, Save, X } from 'lucide-react';
 
 const API_URL = 'https://ap-back.azurewebsites.net/api';
 
@@ -19,91 +19,70 @@ const styles = `
 
   .app-container {
     min-height: 100vh;
-    background: linear-gradient(135deg, #e9d5ff 0%, #dbeafe 50%, #fce7f3 100%);
+    background: linear-gradient(135deg, #f0f4f8 0%, #e6f0f5 50%, #f5f7fa 100%);
   }
 
-  .container {
-    max-width: 1200px;
+  .header-top {
+    background: linear-gradient(135deg, #006ba6 0%, #0080c8 100%);
+    padding: 1rem 0;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  }
+
+  .header-content {
+    max-width: 1400px;
     margin: 0 auto;
-    padding: 2rem 1rem;
-  }
-
-  .header {
-    margin-bottom: 2rem;
-    text-align: center;
-    animation: fadeIn 0.6s ease-out;
-  }
-
-  .logo-container {
+    padding: 0 2rem;
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 1rem;
-    margin-bottom: 1rem;
+    justify-content: space-between;
+  }
+
+  .logo-section {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
   }
 
   .logo {
-    width: 80px;
-    height: 80px;
-    background: linear-gradient(135deg, #9333ea, #ec4899, #6366f1);
-    border-radius: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    height: 60px;
+    width: auto;
+    background: white;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+  }
+
+  .header-title {
     color: white;
-    font-size: 2.5rem;
-    font-weight: 900;
-    box-shadow: 0 10px 25px rgba(147, 51, 234, 0.3);
-    animation: pulse 2s infinite;
   }
 
-  .header h1 {
-    font-size: 3rem;
-    font-weight: 900;
-    background: linear-gradient(135deg, #9333ea, #ec4899, #6366f1);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    margin-bottom: 0.5rem;
+  .header-title h1 {
+    font-size: 1.875rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
   }
 
-  .header p {
-    color: #4b5563;
-    font-size: 1.125rem;
+  .header-title p {
+    font-size: 0.875rem;
+    opacity: 0.9;
   }
 
-  .search-container {
-    max-width: 600px;
-    margin: 0 auto 2rem;
-    position: relative;
-    animation: slideIn 0.5s ease-out;
+  .container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+
+  .search-section {
+    background: white;
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   }
 
   .search-wrapper {
     position: relative;
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-    overflow: hidden;
-    transition: all 0.3s;
-  }
-
-  .search-wrapper:focus-within {
-    box-shadow: 0 15px 35px rgba(147, 51, 234, 0.2);
-    transform: translateY(-2px);
-  }
-
-  .search-input {
-    width: 100%;
-    padding: 1rem 3.5rem 1rem 3.5rem;
-    border: 2px solid transparent;
-    font-size: 1rem;
-    outline: none;
-    transition: border-color 0.3s;
-  }
-
-  .search-input:focus {
-    border-color: #9333ea;
+    max-width: 600px;
   }
 
   .search-icon {
@@ -111,37 +90,22 @@ const styles = `
     left: 1rem;
     top: 50%;
     transform: translateY(-50%);
-    color: #9333ea;
-    pointer-events: none;
+    color: #6b7280;
   }
 
-  .clear-search {
-    position: absolute;
-    right: 1rem;
-    top: 50%;
-    transform: translateY(-50%);
-    background: none;
-    border: none;
-    color: #6b7280;
-    cursor: pointer;
-    padding: 0.5rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
+  .search-input {
+    width: 100%;
+    padding: 0.875rem 1rem 0.875rem 3rem;
+    border: 2px solid #e5e7eb;
+    border-radius: 0.5rem;
+    font-size: 1rem;
     transition: all 0.3s;
   }
 
-  .clear-search:hover {
-    background: #f3f4f6;
-    color: #ef4444;
-  }
-
-  .search-results-info {
-    text-align: center;
-    margin-top: 0.5rem;
-    font-size: 0.875rem;
-    color: #6b7280;
+  .search-input:focus {
+    outline: none;
+    border-color: #006ba6;
+    box-shadow: 0 0 0 3px rgba(0, 107, 166, 0.1);
   }
 
   .stats-grid {
@@ -149,35 +113,34 @@ const styles = `
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 1.5rem;
     margin-bottom: 2rem;
-    animation: slideIn 0.5s ease-out;
   }
 
   .stat-card {
     border-radius: 0.75rem;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
     padding: 1.5rem;
     color: white;
     transition: transform 0.3s;
   }
 
   .stat-card:hover {
-    transform: scale(1.05);
+    transform: translateY(-4px);
   }
 
   .stat-card-blue {
-    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    background: linear-gradient(135deg, #006ba6, #0080c8);
   }
 
   .stat-card-green {
-    background: linear-gradient(135deg, #10b981, #059669);
+    background: linear-gradient(135deg, #059669, #10b981);
   }
 
-  .stat-card-yellow {
-    background: linear-gradient(135deg, #f59e0b, #ea580c);
+  .stat-card-orange {
+    background: linear-gradient(135deg, #ea580c, #f97316);
   }
 
   .stat-card-red {
-    background: linear-gradient(135deg, #ef4444, #ec4899);
+    background: linear-gradient(135deg, #dc2626, #ef4444);
   }
 
   .stat-card-content {
@@ -202,15 +165,14 @@ const styles = `
   }
 
   .main-content {
-    background: rgba(255, 255, 255, 0.8);
-    backdrop-filter: blur(10px);
+    background: white;
     border-radius: 1rem;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
     padding: 2rem;
   }
 
   .main-title {
-    font-size: 1.875rem;
+    font-size: 1.5rem;
     font-weight: 700;
     color: #1f2937;
     margin-bottom: 1.5rem;
@@ -220,36 +182,35 @@ const styles = `
   }
 
   .main-title-icon {
-    color: #9333ea;
+    color: #006ba6;
   }
 
   .main-title-count {
-    font-size: 1.125rem;
+    font-size: 1rem;
     font-weight: 400;
     color: #6b7280;
   }
 
   .item-card {
     margin-bottom: 1rem;
-    animation: slideIn 0.5s ease-out;
   }
 
   .item-card-inner {
-    background: linear-gradient(135deg, #ffffff, #f9fafb);
+    background: white;
     border-radius: 0.75rem;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
     overflow: hidden;
     border-left: 4px solid;
     transition: all 0.3s;
   }
 
   .item-card-inner:hover {
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
     transform: translateX(4px);
   }
 
   .item-card-inner.is-sujet {
-    border-left-color: #3b82f6;
+    border-left-color: #006ba6;
   }
 
   .item-card-inner.is-action {
@@ -257,19 +218,19 @@ const styles = `
   }
 
   .item-card-inner.priority-1 {
-    border-left-color: #ef4444;
+    border-left-color: #dc2626;
   }
 
   .item-card-inner.priority-2 {
-    border-left-color: #f97316;
+    border-left-color: #ea580c;
   }
 
   .item-card-inner.priority-3 {
-    border-left-color: #eab308;
+    border-left-color: #f59e0b;
   }
 
   .item-card-inner.priority-4 {
-    border-left-color: #3b82f6;
+    border-left-color: #006ba6;
   }
 
   .item-card-inner.priority-5 {
@@ -283,7 +244,7 @@ const styles = `
   }
 
   .item-header:hover {
-    background: linear-gradient(135deg, #faf5ff, #eef2ff);
+    background: #f9fafb;
   }
 
   .item-header-content {
@@ -305,12 +266,11 @@ const styles = `
   }
 
   .item-icon {
-    color: #3b82f6;
+    color: #006ba6;
   }
 
   .item-icon.open {
-    color: #f59e0b;
-    animation: bounce 1s infinite;
+    color: #0080c8;
   }
 
   .item-icon.action {
@@ -321,7 +281,7 @@ const styles = `
     position: absolute;
     top: -4px;
     right: -4px;
-    background: linear-gradient(135deg, #9333ea, #ec4899);
+    background: linear-gradient(135deg, #006ba6, #0080c8);
     color: white;
     font-size: 0.75rem;
     font-weight: 700;
@@ -332,7 +292,7 @@ const styles = `
     align-items: center;
     justify-content: center;
     padding: 0 6px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   }
 
   .item-info {
@@ -341,7 +301,7 @@ const styles = `
   }
 
   .item-title {
-    font-size: 1.25rem;
+    font-size: 1.125rem;
     font-weight: 700;
     color: #1f2937;
     margin-bottom: 0.25rem;
@@ -349,14 +309,14 @@ const styles = `
   }
 
   .item-header:hover .item-title {
-    color: #9333ea;
+    color: #006ba6;
   }
 
   .item-description {
     color: #4b5563;
     font-size: 0.875rem;
     margin-bottom: 0.5rem;
-    max-height: 60px;
+    max-height: 80px;
     overflow-y: auto;
     padding-right: 0.5rem;
   }
@@ -366,17 +326,13 @@ const styles = `
   }
 
   .item-description::-webkit-scrollbar-track {
-    background: #f1f5f9;
-    border-radius: 10px;
+    background: #f1f1f1;
+    border-radius: 3px;
   }
 
   .item-description::-webkit-scrollbar-thumb {
-    background: #9333ea;
-    border-radius: 10px;
-  }
-
-  .item-description::-webkit-scrollbar-thumb:hover {
-    background: #7c3aed;
+    background: #006ba6;
+    border-radius: 3px;
   }
 
   .item-meta {
@@ -394,63 +350,77 @@ const styles = `
     color: #374151;
   }
 
-  .meta-item.responsable {
-    font-weight: 500;
-  }
-
   .meta-icon.user {
-    color: #6366f1;
+    color: #006ba6;
   }
 
   .meta-icon.calendar {
-    color: #ec4899;
+    color: #10b981;
   }
 
   .status-badge {
     display: inline-flex;
     align-items: center;
     gap: 0.25rem;
-    padding: 0.25rem 0.75rem;
+    padding: 0.375rem 0.875rem;
     border-radius: 9999px;
     font-size: 0.75rem;
     font-weight: 600;
     color: white;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    margin-top: 0.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .status-badge:hover {
+    transform: scale(1.05);
   }
 
   .status-badge.blocked {
-    background: #ef4444;
+    background: #dc2626;
   }
 
   .status-badge.closed {
-    background: #1f2937;
+    background: #374151;
   }
 
   .status-badge.open {
-    background: #3b82f6;
+    background: #006ba6;
   }
 
   .status-badge.overdue {
-    background: #10b981;
+    background: #ea580c;
   }
 
-  .status-badge.new {
-    background: #8b5cf6;
+  .status-dropdown {
+    position: relative;
+    display: inline-block;
   }
 
-  .status-badge.in_progress {
-    background: #f59e0b;
+  .status-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 0.5rem;
+    background: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    min-width: 150px;
+    z-index: 1000;
+    overflow: hidden;
   }
 
-  .status-badge.completed {
-    background: #10b981;
+  .status-option {
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    transition: background 0.2s;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #374151;
   }
 
-  .priority-label {
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: #6b7280;
+  .status-option:hover {
+    background: #f3f4f6;
   }
 
   .item-stats {
@@ -480,35 +450,20 @@ const styles = `
     width: 100%;
     background: #e5e7eb;
     border-radius: 9999px;
-    height: 12px;
+    height: 10px;
     overflow: hidden;
-    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
     margin-top: 0.5rem;
   }
 
   .progress-fill {
     height: 100%;
-    background: linear-gradient(90deg, #4ade80, #10b981);
+    background: linear-gradient(90deg, #10b981, #059669);
     border-radius: 9999px;
-    transition: width 0.7s;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    position: relative;
-  }
-
-  .progress-fill::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: white;
-    opacity: 0.3;
-    animation: pulse 2s infinite;
+    transition: width 0.5s;
   }
 
   .item-toggle {
-    color: #9333ea;
+    color: #006ba6;
     background: none;
     border: none;
     cursor: pointer;
@@ -517,11 +472,11 @@ const styles = `
   }
 
   .item-toggle:hover {
-    transform: scale(1.25);
+    transform: scale(1.2);
   }
 
   .item-children {
-    background: linear-gradient(135deg, #f8fafc, #dbeafe);
+    background: #f9fafb;
     padding: 1.5rem;
     border-top: 1px solid #e5e7eb;
   }
@@ -529,7 +484,7 @@ const styles = `
   .children-title {
     font-size: 0.875rem;
     font-weight: 700;
-    color: #7c3aed;
+    color: #006ba6;
     margin-bottom: 1rem;
     display: flex;
     align-items: center;
@@ -540,12 +495,73 @@ const styles = `
     margin-left: 1.5rem;
   }
 
+  .action-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr auto;
+    gap: 1.5rem;
+    align-items: center;
+    padding-top: 0.25rem;
+    width: 100%;
+  }
+
+  .action-col {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+  }
+
+  .action-title-container {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    flex: 1;
+  }
+
+  .action-title {
+    font-weight: 700;
+    color: #111827;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .action-desc {
+    font-weight: 400;
+    color: #6b7280;
+    font-size: 0.875rem;
+    max-height: 60px;
+    overflow-y: auto;
+    padding-right: 0.5rem;
+    margin-top: 0.25rem;
+  }
+
+  .action-desc::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .action-desc::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 2px;
+  }
+
+  .action-desc::-webkit-scrollbar-thumb {
+    background: #006ba6;
+    border-radius: 2px;
+  }
+
+  .item-card-inner.is-action .item-title,
+  .item-card-inner.is-action .item-description,
+  .item-card-inner.is-action .item-meta {
+    display: none;
+  }
+
   .loading-container {
     min-height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, #e9d5ff 0%, #dbeafe 50%, #fce7f3 100%);
+    background: linear-gradient(135deg, #f0f4f8 0%, #e6f0f5 50%, #f5f7fa 100%);
   }
 
   .loading-content {
@@ -556,9 +572,9 @@ const styles = `
     display: inline-block;
     width: 64px;
     height: 64px;
-    border: 4px solid rgba(147, 51, 234, 0.1);
-    border-top-color: #9333ea;
-    border-bottom-color: #9333ea;
+    border: 4px solid rgba(0, 107, 166, 0.1);
+    border-top-color: #006ba6;
+    border-bottom-color: #006ba6;
     border-radius: 50%;
     animation: spin 1s linear infinite;
     margin-bottom: 1rem;
@@ -607,27 +623,22 @@ const styles = `
     margin-bottom: 1rem;
   }
 
-  .error-hint {
-    font-size: 0.875rem;
-    color: #6b7280;
-    text-align: center;
-  }
-
   .retry-button {
     margin-top: 1rem;
     width: 100%;
-    background: linear-gradient(135deg, #9333ea, #6366f1);
+    background: linear-gradient(135deg, #006ba6, #0080c8);
     color: white;
-    padding: 0.5rem 1rem;
+    padding: 0.75rem 1rem;
     border-radius: 0.5rem;
     font-weight: 600;
     border: none;
     cursor: pointer;
-    transition: box-shadow 0.3s;
+    transition: all 0.3s;
   }
 
   .retry-button:hover {
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 107, 166, 0.3);
   }
 
   .empty-state {
@@ -642,7 +653,7 @@ const styles = `
 
   .empty-text {
     color: #6b7280;
-    font-size: 1.25rem;
+    font-size: 1.125rem;
   }
 
   .no-items {
@@ -652,107 +663,8 @@ const styles = `
     font-style: italic;
   }
 
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-
-  @keyframes slideIn {
-    from { opacity: 0; transform: translateX(-30px); }
-    to { opacity: 1; transform: translateX(0); }
-  }
-
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  @keyframes bounce {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-10px); }
-  }
-
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
-  }
-
-  .item-card-inner.is-action .item-title,
-  .item-card-inner.is-action .item-description,
-  .item-card-inner.is-action .item-meta {
-    display: none;
-  }
-
-  .action-row {
-    display: grid;
-    grid-template-columns: 2fr 1fr 1fr auto;
-    gap: 1.5rem;
-    align-items: center;
-    padding-top: 0.25rem;
-    width: 100%;
-  }
-
-  .action-col {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    min-width: 0;
-  }
-
-  .action-col.name {
-    font-weight: 700;
-    color: #111827;
-    flex: 1;
-    min-width: 0;
-  }
-
-  .action-title-container {
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-    flex: 1;
-  }
-
-  .action-title {
-    font-weight: 700;
-    color: #111827;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .action-desc {
-    font-weight: 500;
-    color: #6b7280;
-    font-size: 0.875rem;
-    max-height: 40px;
-    overflow-y: auto;
-    margin-top: 0.25rem;
-    padding-right: 0.5rem;
-  }
-
-  .action-desc::-webkit-scrollbar {
-    width: 4px;
-  }
-
-  .action-desc::-webkit-scrollbar-track {
-    background: #f1f5f9;
-    border-radius: 10px;
-  }
-
-  .action-desc::-webkit-scrollbar-thumb {
-    background: #9333ea;
-    border-radius: 10px;
-  }
-
-  .action-desc::-webkit-scrollbar-thumb:hover {
-    background: #7c3aed;
-  }
-
-  .action-col.resp .meta-icon.user { color: #6366f1; }
-  .action-col.date .meta-icon.calendar { color: #ec4899; }
-
-  .action-col.status .status-badge {
-    display: inline-flex;
-    margin-top: 0;
-    white-space: nowrap;
+  @keyframes spin { 
+    to { transform: rotate(360deg); } 
   }
 
   @media (max-width: 1024px) {
@@ -763,6 +675,11 @@ const styles = `
   }
 
   @media (max-width: 768px) {
+    .header-content {
+      flex-direction: column;
+      gap: 1rem;
+    }
+
     .action-row {
       grid-template-columns: 1fr;
       gap: 0.75rem;
@@ -771,39 +688,12 @@ const styles = `
     .action-col {
       justify-content: flex-start;
     }
-    
-    .action-col.name {
-      grid-column: 1 / -1;
-      margin-bottom: 0.5rem;
-    }
-    
-    .action-col.resp,
-    .action-col.date,
-    .action-col.status {
-      justify-content: flex-start;
-    }
-  }
-
-  @media (max-width: 480px) {
-    .action-row {
-      gap: 0.5rem;
-    }
-    
-    .action-col {
-      font-size: 0.875rem;
-    }
-    
-    .action-title {
-      font-size: 1rem;
-    }
-    
-    .action-desc {
-      font-size: 0.8rem;
-    }
   }
 `;
 
-const StatusBadge = ({ status }) => {
+const StatusBadge = ({ status, onStatusChange, actionId }) => {
+  const [showMenu, setShowMenu] = useState(false);
+  
   const statusConfig = {
     blocked: { text: 'Blocked', className: 'blocked' },
     closed: { text: 'Closed', className: 'closed' },
@@ -811,17 +701,49 @@ const StatusBadge = ({ status }) => {
     overdue: { text: 'Overdue', className: 'overdue' },
   };
   
-  const normalizedStatus = status ? status.toLowerCase() : 'new';
-  const config = statusConfig[normalizedStatus] || statusConfig.new;
+  const normalizedStatus = status ? status.toLowerCase() : 'open';
+  const config = statusConfig[normalizedStatus] || statusConfig.open;
   
+  const handleStatusClick = (e) => {
+    e.stopPropagation();
+    setShowMenu(!showMenu);
+  };
+
+  const handleStatusSelect = async (newStatus, e) => {
+    e.stopPropagation();
+    setShowMenu(false);
+    if (onStatusChange) {
+      await onStatusChange(actionId, newStatus);
+    }
+  };
+
   return (
-    <span className={`status-badge ${config.className}`}>
-      {config.text}
-    </span>
+    <div className="status-dropdown" onClick={(e) => e.stopPropagation()}>
+      <span className={`status-badge ${config.className}`} onClick={handleStatusClick}>
+        <Edit2 size={12} />
+        {config.text}
+      </span>
+      {showMenu && (
+        <div className="status-menu">
+          <div className="status-option" onClick={(e) => handleStatusSelect('open', e)}>
+            Open
+          </div>
+          <div className="status-option" onClick={(e) => handleStatusSelect('closed', e)}>
+            Closed
+          </div>
+          <div className="status-option" onClick={(e) => handleStatusSelect('blocked', e)}>
+            Blocked
+          </div>
+          <div className="status-option" onClick={(e) => handleStatusSelect('overdue', e)}>
+            Overdue
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 
-const ItemCard = ({ item, type = 'sujet', depth = 0, sujetDepth = 0, actionDepth = 0 }) => {
+const ItemCard = ({ item, type = 'sujet', depth = 0, sujetDepth = 0, actionDepth = 0, onStatusChange }) => {
   const [expanded, setExpanded] = useState(false);
   const [children, setChildren] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -869,10 +791,7 @@ const ItemCard = ({ item, type = 'sujet', depth = 0, sujetDepth = 0, actionDepth
     ? Math.round((item.completed_actions / item.total_actions) * 100)
     : 0;
 
-  const totalChildren = isSujet 
-    ? (item.total_actions || 0) 
-    : 0;
-
+  const totalChildren = isSujet ? (item.total_actions || 0) : 0;
   const priorityClass = isAction && item.priorite ? `priority-${item.priorite}` : '';
   const typeClass = isSujet ? 'is-sujet' : 'is-action';
 
@@ -946,7 +865,7 @@ const ItemCard = ({ item, type = 'sujet', depth = 0, sujetDepth = 0, actionDepth
                       <div className="action-title-container">
                         <span className="action-title">{item.titre}</span>
                         {item.description && (
-                          <span className="action-desc">{item.description}</span>
+                          <div className="action-desc">{item.description}</div>
                         )}
                       </div>
                     </div>
@@ -960,13 +879,17 @@ const ItemCard = ({ item, type = 'sujet', depth = 0, sujetDepth = 0, actionDepth
                       <Calendar size={16} className="meta-icon calendar" />
                       <span>
                         {item.due_date
-                          ? new Date(item.due_date).toLocaleDateString('en-GB')
+                          ? new Date(item.due_date).toLocaleDateString('fr-FR')
                           : '—'}
                       </span>
                     </div>
 
                     <div className="action-col status">
-                      <StatusBadge status={item.status} />
+                      <StatusBadge 
+                        status={item.status} 
+                        actionId={item.id}
+                        onStatusChange={onStatusChange}
+                      />
                     </div>
                   </div>
                 )}
@@ -996,6 +919,7 @@ const ItemCard = ({ item, type = 'sujet', depth = 0, sujetDepth = 0, actionDepth
                       depth={0}
                       sujetDepth={sujetDepth + 1}
                       actionDepth={0}
+                      onStatusChange={onStatusChange}
                     />
                   ))}
                 </div>
@@ -1017,6 +941,7 @@ const ItemCard = ({ item, type = 'sujet', depth = 0, sujetDepth = 0, actionDepth
                       depth={0}
                       sujetDepth={sujetDepth}
                       actionDepth={actionDepth + 1}
+                      onStatusChange={onStatusChange}
                     />
                   ))}
                 </div>
@@ -1045,11 +970,11 @@ const ItemCard = ({ item, type = 'sujet', depth = 0, sujetDepth = 0, actionDepth
 
 const App = () => {
   const [sujets, setSujets] = useState([]);
+  const [filteredSujets, setFilteredSujets] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filteredSujets, setFilteredSujets] = useState([]);
 
   useEffect(() => {
     fetchData();
@@ -1060,21 +985,13 @@ const App = () => {
       setFilteredSujets(sujets);
     } else {
       const term = searchTerm.toLowerCase();
-      const filtered = filterItems(sujets, term);
+      const filtered = sujets.filter(sujet => 
+        sujet.titre.toLowerCase().includes(term) ||
+        (sujet.description && sujet.description.toLowerCase().includes(term))
+      );
       setFilteredSujets(filtered);
     }
   }, [searchTerm, sujets]);
-
-  const filterItems = (items, term) => {
-    return items.filter(item => {
-      const titleMatch = item.titre?.toLowerCase().includes(term);
-      const descMatch = item.description?.toLowerCase().includes(term);
-      const respMatch = item.responsable?.toLowerCase().includes(term);
-      const statusMatch = item.status?.toLowerCase().includes(term);
-      
-      return titleMatch || descMatch || respMatch || statusMatch;
-    });
-  };
 
   const fetchData = async () => {
     try {
@@ -1100,8 +1017,23 @@ const App = () => {
     }
   };
 
-  const handleClearSearch = () => {
-    setSearchTerm('');
+  const handleStatusChange = async (actionId, newStatus) => {
+    try {
+      const response = await fetch(`${API_URL}/actions/${actionId}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      if (response.ok) {
+        // Rafraîchir les données
+        await fetchData();
+      }
+    } catch (error) {
+      console.error('Error updating status:', error);
+    }
   };
 
   if (loading) {
@@ -1111,7 +1043,7 @@ const App = () => {
         <div className="loading-container">
           <div className="loading-content">
             <div className="spinner"></div>
-            <p className="loading-text">Loading...</p>
+            <p className="loading-text">Chargement...</p>
           </div>
         </div>
       </>
@@ -1125,11 +1057,10 @@ const App = () => {
         <div className="error-container">
           <div className="error-card">
             <AlertCircle size={48} className="error-icon" />
-            <h2 className="error-title">Connection Error</h2>
+            <h2 className="error-title">Erreur de connexion</h2>
             <p className="error-message">{error}</p>
-            <p className="error-hint">Please check that the API is running</p>
             <button onClick={fetchData} className="retry-button">
-              Retry
+              Réessayer
             </button>
           </div>
         </div>
@@ -1141,40 +1072,34 @@ const App = () => {
     <>
       <style>{styles}</style>
       <div className="app-container">
-        <div className="container">
-          <header className="header">
-            <div className="logo-container">
-              <div className="logo">📋</div>
+        <div className="header-top">
+          <div className="header-content">
+            <div className="logo-section">
+              <img 
+                src="https://i.imgur.com/9xYK8Zm.png" 
+                alt="AvoCarbon Group" 
+                className="logo"
+              />
+              <div className="header-title">
+                <h1>Action Plan Management</h1>
+                <p>Gérez et suivez vos projets et actions</p>
+              </div>
             </div>
-            <h1>Action Plan Management</h1>
-            <p>View and manage your projects and actions</p>
-          </header>
+          </div>
+        </div>
 
-          <div className="search-container">
+        <div className="container">
+          <div className="search-section">
             <div className="search-wrapper">
               <Search size={20} className="search-icon" />
               <input
                 type="text"
                 className="search-input"
-                placeholder="Rechercher par nom, responsable, statut, description..."
+                placeholder="Rechercher par nom de sujet, action, responsable..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
-              {searchTerm && (
-                <button 
-                  className="clear-search" 
-                  onClick={handleClearSearch}
-                  aria-label="Clear search"
-                >
-                  <X size={20} />
-                </button>
-              )}
             </div>
-            {searchTerm && (
-              <div className="search-results-info">
-                {filteredSujets.length} résultat{filteredSujets.length !== 1 ? 's' : ''} trouvé{filteredSujets.length !== 1 ? 's' : ''}
-              </div>
-            )}
           </div>
 
           {stats && (
@@ -1182,7 +1107,7 @@ const App = () => {
               <div className="stat-card stat-card-blue">
                 <div className="stat-card-content">
                   <div>
-                    <p className="stat-label">Total Topics</p>
+                    <p className="stat-label">Total Sujets</p>
                     <p className="stat-value">{stats.total_sujets}</p>
                   </div>
                   <Folder size={48} className="stat-icon" />
@@ -1192,17 +1117,17 @@ const App = () => {
               <div className="stat-card stat-card-green">
                 <div className="stat-card-content">
                   <div>
-                    <p className="stat-label">Completed</p>
+                    <p className="stat-label">Terminées</p>
                     <p className="stat-value">{stats.actions_completed}</p>
                   </div>
                   <CheckCircle2 size={48} className="stat-icon" />
                 </div>
               </div>
               
-              <div className="stat-card stat-card-yellow">
+              <div className="stat-card stat-card-orange">
                 <div className="stat-card-content">
                   <div>
-                    <p className="stat-label">In progress</p>
+                    <p className="stat-label">En cours</p>
                     <p className="stat-value">{stats.actions_in_progress}</p>
                   </div>
                   <Clock size={48} className="stat-icon" />
@@ -1212,7 +1137,7 @@ const App = () => {
               <div className="stat-card stat-card-red">
                 <div className="stat-card-content">
                   <div>
-                    <p className="stat-label">Overdue</p>
+                    <p className="stat-label">En retard</p>
                     <p className="stat-value">{stats.actions_overdue}</p>
                   </div>
                   <AlertCircle size={48} className="stat-icon" />
@@ -1224,25 +1149,29 @@ const App = () => {
           <div className="main-content">
             <h2 className="main-title">
               <FolderOpen className="main-title-icon" size={32} />
-              {searchTerm ? 'Résultats de recherche' : 'All Topics'}
+              Tous les sujets
               <span className="main-title-count">({filteredSujets.length})</span>
             </h2>
             
             {filteredSujets.length > 0 ? (
               <div>
                 {filteredSujets.map((sujet) => (
-                  <ItemCard key={sujet.id} item={sujet} type="sujet" sujetDepth={0} actionDepth={0} />
+                  <ItemCard 
+                    key={sujet.id} 
+                    item={sujet} 
+                    type="sujet" 
+                    sujetDepth={0} 
+                    actionDepth={0}
+                    onStatusChange={handleStatusChange}
+                  />
                 ))}
-              </div>
-            ) : searchTerm ? (
-              <div className="empty-state">
-                <Search size={64} className="empty-icon" />
-                <p className="empty-text">Aucun résultat trouvé pour "{searchTerm}"</p>
               </div>
             ) : (
               <div className="empty-state">
                 <Folder size={64} className="empty-icon" />
-                <p className="empty-text">No topics found</p>
+                <p className="empty-text">
+                  {searchTerm ? 'Aucun résultat trouvé' : 'Aucun sujet trouvé'}
+                </p>
               </div>
             )}
           </div>
