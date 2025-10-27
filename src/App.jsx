@@ -209,7 +209,7 @@ const styles = `
     transform: translateX(4px);
   }
 
-  .item-card-inner.is-sujet {
+  .item-card-inner.is-topic {
     border-left-color: #006ba6;
   }
 
@@ -495,7 +495,7 @@ const styles = `
     margin-left: 1.5rem;
   }
 
-  /* Styles pour le tableau des actions */
+  /* Styles for actions table */
   .actions-table {
     width: 100%;
     border-collapse: collapse;
@@ -758,9 +758,9 @@ const StatusBadge = ({ status, onStatusChange, actionId }) => {
   );
 };
 
-const ActionsTable = ({ actions, onStatusChange, depth = 0 }) => {
+const ActionsTable = ({ actions, onStatusChange }) => {
   if (!actions || actions.length === 0) {
-    return <p className="no-items">Aucune action trouvée</p>;
+    return <p className="no-items">No actions found</p>;
   }
 
   return (
@@ -768,11 +768,11 @@ const ActionsTable = ({ actions, onStatusChange, depth = 0 }) => {
       <table className="actions-table">
         <thead>
           <tr>
-            <th>Nom</th>
-            <th>Responsable</th>
-            <th>Date d'échéance</th>
-            <th>Date de fermeture</th>
-            <th>Statut</th>
+            <th>Name</th>
+            <th>Responsible</th>
+            <th>Due Date</th>
+            <th>Closed Date</th>
+            <th>Status</th>
           </tr>
         </thead>
         <tbody>
@@ -780,7 +780,7 @@ const ActionsTable = ({ actions, onStatusChange, depth = 0 }) => {
             <tr key={action.id}>
               <td>
                 <div className="action-title-container">
-                  <span className="action-title">{action.titre}</span>
+                  <span className="action-title">{action.title}</span>
                   {action.description && (
                     <div className="action-desc">{action.description}</div>
                   )}
@@ -789,7 +789,7 @@ const ActionsTable = ({ actions, onStatusChange, depth = 0 }) => {
               <td>
                 <div className="meta-item">
                   <User size={16} className="meta-icon user" />
-                  <span>{action.responsable || '—'}</span>
+                  <span>{action.responsible || '—'}</span>
                 </div>
               </td>
               <td>
@@ -797,7 +797,7 @@ const ActionsTable = ({ actions, onStatusChange, depth = 0 }) => {
                   <Calendar size={16} className="meta-icon calendar" />
                   <span>
                     {action.due_date
-                      ? new Date(action.due_date).toLocaleDateString('fr-FR')
+                      ? new Date(action.due_date).toLocaleDateString('en-US')
                       : '—'}
                   </span>
                 </div>
@@ -807,7 +807,7 @@ const ActionsTable = ({ actions, onStatusChange, depth = 0 }) => {
                   <Calendar size={16} className="meta-icon calendar" />
                   <span>
                     {action.closed_date
-                      ? new Date(action.closed_date).toLocaleDateString('fr-FR')
+                      ? new Date(action.closed_date).toLocaleDateString('en-US')
                       : '—'}
                   </span>
                 </div>
@@ -827,12 +827,12 @@ const ActionsTable = ({ actions, onStatusChange, depth = 0 }) => {
   );
 };
 
-const ItemCard = ({ item, type = 'sujet', depth = 0, sujetDepth = 0, actionDepth = 0, onStatusChange }) => {
+const ItemCard = ({ item, type = 'topic', depth = 0, topicDepth = 0, actionDepth = 0, onStatusChange, refreshData }) => {
   const [expanded, setExpanded] = useState(false);
   const [children, setChildren] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  const isSujet = type === 'sujet';
+  const isTopic = type === 'topic';
   const isAction = type === 'action';
 
   const fetchChildren = async () => {
@@ -840,23 +840,23 @@ const ItemCard = ({ item, type = 'sujet', depth = 0, sujetDepth = 0, actionDepth
     setLoading(true);
     
     try {
-      if (isSujet) {
-        const [sousSujetsRes, actionsRes] = await Promise.all([
-          fetch(`${API_URL}/sujets/${item.id}/sous-sujets`),
-          fetch(`${API_URL}/sujets/${item.id}/actions`)
+      if (isTopic) {
+        const [subTopicsRes, actionsRes] = await Promise.all([
+          fetch(`${API_URL}/topics/${item.id}/sub-topics`),
+          fetch(`${API_URL}/topics/${item.id}/actions`)
         ]);
-        const sousSujets = await sousSujetsRes.json();
+        const subTopics = await subTopicsRes.json();
         const actions = await actionsRes.json();
         
         const allChildren = [
-          ...sousSujets.map(s => ({ ...s, itemType: 'sujet' })),
+          ...subTopics.map(s => ({ ...s, itemType: 'topic' })),
           ...actions.map(a => ({ ...a, itemType: 'action' }))
         ];
         setChildren(allChildren);
       } else if (isAction) {
-        const response = await fetch(`${API_URL}/actions/${item.id}/sous-actions`);
-        const sousActions = await response.json();
-        setChildren(sousActions.map(sa => ({ ...sa, itemType: 'action' })));
+        const response = await fetch(`${API_URL}/actions/${item.id}/sub-actions`);
+        const subActions = await response.json();
+        setChildren(subActions.map(sa => ({ ...sa, itemType: 'action' })));
       }
     } catch (error) {
       console.error('Error:', error);
@@ -875,21 +875,21 @@ const ItemCard = ({ item, type = 'sujet', depth = 0, sujetDepth = 0, actionDepth
     ? Math.round((item.completed_actions / item.total_actions) * 100)
     : 0;
 
-  const totalChildren = isSujet ? (item.total_actions || 0) : 0;
-  const priorityClass = isAction && item.priorite ? `priority-${item.priorite}` : '';
-  const typeClass = isSujet ? 'is-sujet' : 'is-action';
+  const totalChildren = isTopic ? (item.total_actions || 0) : 0;
+  const priorityClass = isAction && item.priority ? `priority-${item.priority}` : '';
+  const typeClass = isTopic ? 'is-topic' : 'is-action';
 
-  const getSujetLabel = (depth) => {
-    const labels = ['Sujet', 'Sous-sujet', 'Sous-sous-sujet', 'Sous-sous-sous-sujet'];
+  const getTopicLabel = (depth) => {
+    const labels = ['Topic', 'Sub-topic', 'Sub-sub-topic', 'Sub-sub-sub-topic'];
     return labels[Math.min(depth, labels.length - 1)];
   };
 
   const getActionLabel = (depth) => {
-    const labels = ['Action', 'Sous-action', 'Sous-sous-action', 'Sous-sous-sous-action'];
+    const labels = ['Action', 'Sub-action', 'Sub-sub-action', 'Sub-sub-sub-action'];
     return labels[Math.min(depth, labels.length - 1)];
   };
 
-  const sujetChildren = children.filter(c => c.itemType === 'sujet');
+  const topicChildren = children.filter(c => c.itemType === 'topic');
   const actionChildren = children.filter(c => c.itemType === 'action');
 
   return (
@@ -899,7 +899,7 @@ const ItemCard = ({ item, type = 'sujet', depth = 0, sujetDepth = 0, actionDepth
           <div className="item-header-content">
             <div className="item-left">
               <div className="item-icon-wrapper">
-                {isSujet ? (
+                {isTopic ? (
                   expanded ? (
                     <FolderOpen size={32} className="item-icon open" />
                   ) : (
@@ -914,16 +914,16 @@ const ItemCard = ({ item, type = 'sujet', depth = 0, sujetDepth = 0, actionDepth
               </div>
               
               <div className="item-info">
-                {isSujet && (
+                {isTopic && (
                   <>
-                    <h3 className="item-title">{item.titre}</h3>
+                    <h3 className="item-title">{item.title}</h3>
                     {item.description && (
                       <p className="item-description">{item.description}</p>
                     )}
                   </>
                 )}
 
-                {isSujet && item.total_actions > 0 && (
+                {isTopic && item.total_actions > 0 && (
                   <div>
                     <div className="item-stats">
                       <span className="stat-item green">
@@ -945,20 +945,20 @@ const ItemCard = ({ item, type = 'sujet', depth = 0, sujetDepth = 0, actionDepth
 
                 {isAction && (
                   <div className="action-title-container">
-                    <span className="action-title">{item.titre}</span>
+                    <span className="action-title">{item.title}</span>
                     {item.description && (
                       <div className="action-desc">{item.description}</div>
                     )}
                     <div className="item-meta">
                       <div className="meta-item">
                         <User size={16} className="meta-icon user" />
-                        <span>{item.responsable || '—'}</span>
+                        <span>{item.responsible || '—'}</span>
                       </div>
                       <div className="meta-item">
                         <Calendar size={16} className="meta-icon calendar" />
                         <span>
                           {item.due_date
-                            ? new Date(item.due_date).toLocaleDateString('fr-FR')
+                            ? new Date(item.due_date).toLocaleDateString('en-US')
                             : '—'}
                         </span>
                       </div>
@@ -973,7 +973,7 @@ const ItemCard = ({ item, type = 'sujet', depth = 0, sujetDepth = 0, actionDepth
                     {item.closed_date && item.status === 'closed' && (
                       <div className="closed-date-info">
                         <Clock size={14} />
-                        <span>Fermée le: {new Date(item.closed_date).toLocaleDateString('fr-FR')}</span>
+                        <span>Closed on: {new Date(item.closed_date).toLocaleDateString('en-US')}</span>
                       </div>
                     )}
                   </div>
@@ -989,22 +989,23 @@ const ItemCard = ({ item, type = 'sujet', depth = 0, sujetDepth = 0, actionDepth
 
         {expanded && children.length > 0 && (
           <div className="item-children">
-            {sujetChildren.length > 0 && (
+            {topicChildren.length > 0 && (
               <>
                 <h5 className="children-title">
                   <ChevronRight size={16} />
-                  {getSujetLabel(sujetDepth + 1)} ({sujetChildren.length})
+                  {getTopicLabel(topicDepth + 1)} ({topicChildren.length})
                 </h5>
                 <div className="nested-items">
-                  {sujetChildren.map((child) => (
+                  {topicChildren.map((child) => (
                     <ItemCard 
                       key={`${child.itemType}-${child.id}`} 
                       item={child} 
                       type={child.itemType}
                       depth={0}
-                      sujetDepth={sujetDepth + 1}
+                      topicDepth={topicDepth + 1}
                       actionDepth={0}
                       onStatusChange={onStatusChange}
+                      refreshData={refreshData}
                     />
                   ))}
                 </div>
@@ -1013,22 +1014,15 @@ const ItemCard = ({ item, type = 'sujet', depth = 0, sujetDepth = 0, actionDepth
             
             {actionChildren.length > 0 && (
               <>
-                <h5 className="children-title" style={sujetChildren.length > 0 ? { marginTop: '1rem' } : {}}>
+                <h5 className="children-title" style={topicChildren.length > 0 ? { marginTop: '1rem' } : {}}>
                   <ChevronRight size={16} />
                   {getActionLabel(actionDepth)} ({actionChildren.length})
                 </h5>
                 <div className="nested-items">
-                  {actionChildren.map((child) => (
-                    <ItemCard 
-                      key={`${child.itemType}-${child.id}`} 
-                      item={child} 
-                      type={child.itemType}
-                      depth={0}
-                      sujetDepth={sujetDepth}
-                      actionDepth={actionDepth + 1}
-                      onStatusChange={onStatusChange}
-                    />
-                  ))}
+                  <ActionsTable 
+                    actions={actionChildren} 
+                    onStatusChange={onStatusChange}
+                  />
                 </div>
               </>
             )}
@@ -1038,14 +1032,14 @@ const ItemCard = ({ item, type = 'sujet', depth = 0, sujetDepth = 0, actionDepth
         {expanded && children.length === 0 && !loading && (
           <div className="item-children">
             <p className="no-items">
-              {isSujet ? 'Aucun contenu' : 'Aucune sous-action'}
+              {isTopic ? 'No content' : 'No sub-actions'}
             </p>
           </div>
         )}
 
         {expanded && loading && (
           <div className="item-children">
-            <p className="no-items">Chargement...</p>
+            <p className="no-items">Loading...</p>
           </div>
         )}
       </div>
@@ -1054,47 +1048,31 @@ const ItemCard = ({ item, type = 'sujet', depth = 0, sujetDepth = 0, actionDepth
 };
 
 const App = () => {
-  const [sujets, setSujets] = useState([]);
-  const [filteredSujets, setFilteredSujets] = useState([]);
+  const [topics, setTopics] = useState([]);
+  const [filteredTopics, setFilteredTopics] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  useEffect(() => {
-    fetchData();
-  }, [refreshTrigger]);
-
-  useEffect(() => {
-    if (searchTerm.trim() === '') {
-      setFilteredSujets(sujets);
-    } else {
-      const term = searchTerm.toLowerCase();
-      const filtered = sujets.filter(sujet => 
-        sujet.titre.toLowerCase().includes(term) ||
-        (sujet.description && sujet.description.toLowerCase().includes(term))
-      );
-      setFilteredSujets(filtered);
-    }
-  }, [searchTerm, sujets]);
-
   const fetchData = async () => {
     try {
-      const [sujetsRes, statsRes] = await Promise.all([
-        fetch(`${API_URL}/sujets-racines`),
-        fetch(`${API_URL}/statistiques`)
+      setLoading(true);
+      const [topicsRes, statsRes] = await Promise.all([
+        fetch(`${API_URL}/root-topics`),
+        fetch(`${API_URL}/statistics`)
       ]);
       
-      if (!sujetsRes.ok || !statsRes.ok) {
+      if (!topicsRes.ok || !statsRes.ok) {
         throw new Error('API connection error');
       }
       
-      const sujetsData = await sujetsRes.json();
+      const topicsData = await topicsRes.json();
       const statsData = await statsRes.json();
       
-      setSujets(sujetsData);
-      setFilteredSujets(sujetsData);
+      setTopics(topicsData);
+      setFilteredTopics(topicsData);
       setStats(statsData);
       setLoading(false);
     } catch (err) {
@@ -1103,20 +1081,34 @@ const App = () => {
     }
   };
 
+  useEffect(() => {
+    fetchData();
+  }, [refreshTrigger]);
+
+  useEffect(() => {
+    if (searchTerm.trim() === '') {
+      setFilteredTopics(topics);
+    } else {
+      const term = searchTerm.toLowerCase();
+      const filtered = topics.filter(topic => 
+        topic.title.toLowerCase().includes(term) ||
+        (topic.description && topic.description.toLowerCase().includes(term))
+      );
+      setFilteredTopics(filtered);
+    }
+  }, [searchTerm, topics]);
+
   const handleStatusChange = async (actionId, newStatus) => {
     try {
-      // Si le nouveau statut est "closed", on ajoute la date actuelle sans l'heure
       const updateData = {
         status: newStatus
       };
       
       if (newStatus === 'closed') {
         const now = new Date();
-        // Format YYYY-MM-DD (sans l'heure)
         const today = now.toISOString().split('T')[0];
         updateData.closed_date = today;
       } else {
-        // Si le statut n'est pas "closed", on supprime la date de fermeture
         updateData.closed_date = null;
       }
 
@@ -1129,7 +1121,7 @@ const App = () => {
       });
 
       if (response.ok) {
-        // Déclencher le rafraîchissement des données
+        // Force refresh all data
         setRefreshTrigger(prev => prev + 1);
       } else {
         console.error('Error updating status:', response.statusText);
@@ -1139,6 +1131,10 @@ const App = () => {
     }
   };
 
+  const refreshData = () => {
+    setRefreshTrigger(prev => prev + 1);
+  };
+
   if (loading) {
     return (
       <>
@@ -1146,7 +1142,7 @@ const App = () => {
         <div className="loading-container">
           <div className="loading-content">
             <div className="spinner"></div>
-            <p className="loading-text">Chargement...</p>
+            <p className="loading-text">Loading...</p>
           </div>
         </div>
       </>
@@ -1160,10 +1156,10 @@ const App = () => {
         <div className="error-container">
           <div className="error-card">
             <AlertCircle size={48} className="error-icon" />
-            <h2 className="error-title">Erreur de connexion</h2>
+            <h2 className="error-title">Connection Error</h2>
             <p className="error-message">{error}</p>
             <button onClick={fetchData} className="retry-button">
-              Réessayer
+              Try Again
             </button>
           </div>
         </div>
@@ -1185,7 +1181,7 @@ const App = () => {
               />
               <div className="header-title">
                 <h1>Action Plan Management</h1>
-                <p>Gérez et suivez vos projets et actions</p>
+                <p>Manage and track your projects and actions</p>
               </div>
             </div>
           </div>
@@ -1198,7 +1194,7 @@ const App = () => {
               <input
                 type="text"
                 className="search-input"
-                placeholder="Rechercher par nom de sujet, action, responsable..."
+                placeholder="Search by topic name, action, responsible..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -1210,8 +1206,8 @@ const App = () => {
               <div className="stat-card stat-card-blue">
                 <div className="stat-card-content">
                   <div>
-                    <p className="stat-label">Total Sujets</p>
-                    <p className="stat-value">{stats.total_sujets}</p>
+                    <p className="stat-label">Total Topics</p>
+                    <p className="stat-value">{stats.total_topics}</p>
                   </div>
                   <Folder size={48} className="stat-icon" />
                 </div>
@@ -1220,7 +1216,7 @@ const App = () => {
               <div className="stat-card stat-card-green">
                 <div className="stat-card-content">
                   <div>
-                    <p className="stat-label">Terminées</p>
+                    <p className="stat-label">Completed</p>
                     <p className="stat-value">{stats.actions_completed}</p>
                   </div>
                   <CheckCircle2 size={48} className="stat-icon" />
@@ -1230,7 +1226,7 @@ const App = () => {
               <div className="stat-card stat-card-orange">
                 <div className="stat-card-content">
                   <div>
-                    <p className="stat-label">En cours</p>
+                    <p className="stat-label">In Progress</p>
                     <p className="stat-value">{stats.actions_in_progress}</p>
                   </div>
                   <Clock size={48} className="stat-icon" />
@@ -1240,7 +1236,7 @@ const App = () => {
               <div className="stat-card stat-card-red">
                 <div className="stat-card-content">
                   <div>
-                    <p className="stat-label">En retard</p>
+                    <p className="stat-label">Overdue</p>
                     <p className="stat-value">{stats.actions_overdue}</p>
                   </div>
                   <AlertCircle size={48} className="stat-icon" />
@@ -1252,20 +1248,21 @@ const App = () => {
           <div className="main-content">
             <h2 className="main-title">
               <FolderOpen className="main-title-icon" size={32} />
-              Tous les sujets
-              <span className="main-title-count">({filteredSujets.length})</span>
+              All Topics
+              <span className="main-title-count">({filteredTopics.length})</span>
             </h2>
             
-            {filteredSujets.length > 0 ? (
+            {filteredTopics.length > 0 ? (
               <div>
-                {filteredSujets.map((sujet) => (
+                {filteredTopics.map((topic) => (
                   <ItemCard 
-                    key={sujet.id} 
-                    item={sujet} 
-                    type="sujet" 
-                    sujetDepth={0} 
+                    key={topic.id} 
+                    item={topic} 
+                    type="topic" 
+                    topicDepth={0} 
                     actionDepth={0}
                     onStatusChange={handleStatusChange}
+                    refreshData={refreshData}
                   />
                 ))}
               </div>
@@ -1273,7 +1270,7 @@ const App = () => {
               <div className="empty-state">
                 <Folder size={64} className="empty-icon" />
                 <p className="empty-text">
-                  {searchTerm ? 'Aucun résultat trouvé' : 'Aucun sujet trouvé'}
+                  {searchTerm ? 'No results found' : 'No topics found'}
                 </p>
               </div>
             )}
