@@ -22,93 +22,144 @@ const styles = `
     background: linear-gradient(135deg, #f0f4f8 0%, #e6f0f5 50%, #f5f7fa 100%);
   }
 
-  .header-top {
-    background: linear-gradient(135deg, #006ba6 0%, #0080c8 100%);
-    padding: 1rem 0;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  }
+.header-top {
+  background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 50%, #3b82f6 100%);
+  padding: 1.5rem 0;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+  position: relative;
+  overflow: hidden;
+}
 
-  .header-content {
-    max-width: 1400px;
-    margin: 0 auto;
-    padding: 0 2rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
+.header-top::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(45deg, rgba(255, 255, 255, 0.05) 0%, transparent 100%);
+  pointer-events: none;
+}
 
-  .logo-section {
-    display: flex;
-    align-items: center;
-    gap: 1.5rem;
-  }
+.header-content {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  z-index: 1;
+}
 
-  .logo {
-    height: 110px;
-    width: auto;
-    background: white;
-    padding: 0.5rem 1rem;
-    border-radius: 0.5rem;
-    margin-right: 13rem;
+.logo-section {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+}
 
-  }
+.logo {
+  height: 110px;
+  width: auto;
+  background: white;
+  padding: 0.75rem 1.25rem;
+  border-radius: 1rem;
+  margin-right: 13rem;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
 
-  .header-title {
-    color: white;
-  }
+.logo:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
+}
 
-  .header-title h1 {
-    font-size: 1.875rem;
-    font-weight: 700;
-    margin-bottom: 0.25rem;
-  }
+.header-title {
+  color: white;
+}
 
-  .header-title p {
-    font-size: 0.875rem;
-    opacity: 0.9;
-  }
+.header-title h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  letter-spacing: -0.02em;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+}
 
-  .container {
-    max-width: 1400px;
-    margin: 0 auto;
-    padding: 2rem;
-  }
+.header-title p {
+  font-size: 0.95rem;
+  opacity: 0.95;
+  font-weight: 300;
+  letter-spacing: 0.01em;
+}
 
-  .search-section {
-    background: white;
-    border-radius: 0.75rem;
-    padding: 1.5rem;
-    margin-bottom: 2rem;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  }
+.container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 2.5rem 2rem;
+}
 
-  .search-wrapper {
-    position: relative;
-    max-width: 600px;
-  }
+.search-section {
+  background: white;
+  border-radius: 1rem;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  transition: box-shadow 0.3s ease;
+}
 
-  .search-icon {
-    position: absolute;
-    left: 1rem;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #6b7280;
-  }
+.search-section:hover {
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+}
 
-  .search-input {
-    width: 100%;
-    padding: 0.875rem 1rem 0.875rem 3rem;
-    border: 2px solid #e5e7eb;
-    border-radius: 0.5rem;
-    font-size: 1rem;
-    transition: all 0.3s;
-  }
+.search-wrapper {
+  position: relative;
+  max-width: 600px;
+}
 
-  .search-input:focus {
-    outline: none;
-    border-color: #006ba6;
-    box-shadow: 0 0 0 3px rgba(0, 107, 166, 0.1);
-  }
+.search-icon {
+  position: absolute;
+  left: 1.25rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+  width: 20px;
+  height: 20px;
+  transition: color 0.3s ease;
+}
+
+.search-wrapper:focus-within .search-icon {
+  color: #2563eb;
+}
+
+.search-input {
+  width: 100%;
+  padding: 1rem 1.5rem 1rem 3.5rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 0.75rem;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  background: #fafafa;
+  font-weight: 400;
+}
+
+.search-input:hover {
+  border-color: #d1d5db;
+  background: white;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+  background: white;
+}
+
+.search-input::placeholder {
+  color: #9ca3af;
+  font-weight: 300;
+}
 
   .stats-grid {
     display: grid;
