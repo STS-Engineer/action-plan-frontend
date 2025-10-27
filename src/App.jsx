@@ -44,12 +44,12 @@ const styles = `
   }
 
   .logo {
-    height: 100px;
+    height: 110px;
     width: auto;
     background: white;
     padding: 0.5rem 1rem;
     border-radius: 0.5rem;
-    padding-right: 10rem;
+    margin-right: 10rem;
 
   }
 
