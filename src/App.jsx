@@ -758,7 +758,7 @@ const StatusBadge = ({ status, onStatusChange, actionId }) => {
   );
 };
 
-const ActionsTable = ({ actions, onStatusChange }) => {
+const ActionsTable = ({ actions, onStatusChange, depth = 0 }) => {
   if (!actions || actions.length === 0) {
     return <p className="no-items">Aucune action trouvée</p>;
   }
@@ -1018,10 +1018,17 @@ const ItemCard = ({ item, type = 'sujet', depth = 0, sujetDepth = 0, actionDepth
                   {getActionLabel(actionDepth)} ({actionChildren.length})
                 </h5>
                 <div className="nested-items">
-                  <ActionsTable 
-                    actions={actionChildren} 
-                    onStatusChange={onStatusChange}
-                  />
+                  {actionChildren.map((child) => (
+                    <ItemCard 
+                      key={`${child.itemType}-${child.id}`} 
+                      item={child} 
+                      type={child.itemType}
+                      depth={0}
+                      sujetDepth={sujetDepth}
+                      actionDepth={actionDepth + 1}
+                      onStatusChange={onStatusChange}
+                    />
+                  ))}
                 </div>
               </>
             )}
@@ -1172,7 +1179,7 @@ const App = () => {
           <div className="header-content">
             <div className="logo-section">
               <img 
-                src="https://i.imgur.com/9xYK8Zm.png" 
+                src="https://avocarbon-action-plan.azurewebsites.net/assets/favicon-32-removebg-preview.png" 
                 alt="AvoCarbon Group" 
                 className="logo"
               />
