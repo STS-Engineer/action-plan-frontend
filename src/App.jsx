@@ -49,7 +49,7 @@ const styles = `
     background: white;
     padding: 0.5rem 1rem;
     border-radius: 0.5rem;
-    margin-right: 10rem;
+    margin-right: 13rem;
 
   }
 
