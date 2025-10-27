@@ -44,10 +44,10 @@ const styles = `
   }
 
   .logo {
-    height: 90px;
+    height: 120px;
     width: auto;
-    
-    padding: 0.5rem 1rem;
+    background: white;
+    padding: 0.5rem 5rem;
     border-radius: 0.5rem;
   }
 
