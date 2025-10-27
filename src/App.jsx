@@ -780,7 +780,7 @@ const ActionsTable = ({ actions, onStatusChange }) => {
             <tr key={action.id}>
               <td>
                 <div className="action-title-container">
-                  <span className="action-title">{action.title}</span>
+                  <span className="action-title">{action.titre || action.title}</span>
                   {action.description && (
                     <div className="action-desc">{action.description}</div>
                   )}
@@ -789,7 +789,7 @@ const ActionsTable = ({ actions, onStatusChange }) => {
               <td>
                 <div className="meta-item">
                   <User size={16} className="meta-icon user" />
-                  <span>{action.responsible || '—'}</span>
+                  <span>{action.responsable || action.responsible || '—'}</span>
                 </div>
               </td>
               <td>
@@ -842,24 +842,29 @@ const ItemCard = ({ item, type = 'topic', depth = 0, topicDepth = 0, actionDepth
     try {
       if (isTopic) {
         const [subTopicsRes, actionsRes] = await Promise.all([
-          fetch(`${API_URL}/topics/${item.id}/sub-topics`),
-          fetch(`${API_URL}/topics/${item.id}/actions`)
+          fetch(`${API_URL}/sujets/${item.id}/sous-sujets`),
+          fetch(`${API_URL}/sujets/${item.id}/actions`)
         ]);
-        const subTopics = await subTopicsRes.json();
-        const actions = await actionsRes.json();
         
-        const allChildren = [
-          ...subTopics.map(s => ({ ...s, itemType: 'topic' })),
-          ...actions.map(a => ({ ...a, itemType: 'action' }))
-        ];
-        setChildren(allChildren);
+        if (subTopicsRes.ok && actionsRes.ok) {
+          const subTopics = await subTopicsRes.json();
+          const actions = await actionsRes.json();
+          
+          const allChildren = [
+            ...subTopics.map(s => ({ ...s, itemType: 'topic' })),
+            ...actions.map(a => ({ ...a, itemType: 'action' }))
+          ];
+          setChildren(allChildren);
+        }
       } else if (isAction) {
-        const response = await fetch(`${API_URL}/actions/${item.id}/sub-actions`);
-        const subActions = await response.json();
-        setChildren(subActions.map(sa => ({ ...sa, itemType: 'action' })));
+        const response = await fetch(`${API_URL}/actions/${item.id}/sous-actions`);
+        if (response.ok) {
+          const subActions = await response.json();
+          setChildren(subActions.map(sa => ({ ...sa, itemType: 'action' })));
+        }
       }
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Error fetching children:', error);
     }
     setLoading(false);
   };
@@ -876,7 +881,7 @@ const ItemCard = ({ item, type = 'topic', depth = 0, topicDepth = 0, actionDepth
     : 0;
 
   const totalChildren = isTopic ? (item.total_actions || 0) : 0;
-  const priorityClass = isAction && item.priority ? `priority-${item.priority}` : '';
+  const priorityClass = isAction && item.priorite ? `priority-${item.priorite}` : '';
   const typeClass = isTopic ? 'is-topic' : 'is-action';
 
   const getTopicLabel = (depth) => {
@@ -916,7 +921,7 @@ const ItemCard = ({ item, type = 'topic', depth = 0, topicDepth = 0, actionDepth
               <div className="item-info">
                 {isTopic && (
                   <>
-                    <h3 className="item-title">{item.title}</h3>
+                    <h3 className="item-title">{item.titre || item.title}</h3>
                     {item.description && (
                       <p className="item-description">{item.description}</p>
                     )}
@@ -945,14 +950,14 @@ const ItemCard = ({ item, type = 'topic', depth = 0, topicDepth = 0, actionDepth
 
                 {isAction && (
                   <div className="action-title-container">
-                    <span className="action-title">{item.title}</span>
+                    <span className="action-title">{item.titre || item.title}</span>
                     {item.description && (
                       <div className="action-desc">{item.description}</div>
                     )}
                     <div className="item-meta">
                       <div className="meta-item">
                         <User size={16} className="meta-icon user" />
-                        <span>{item.responsible || '—'}</span>
+                        <span>{item.responsable || item.responsible || '—'}</span>
                       </div>
                       <div className="meta-item">
                         <Calendar size={16} className="meta-icon calendar" />
@@ -1060,12 +1065,15 @@ const App = () => {
     try {
       setLoading(true);
       const [topicsRes, statsRes] = await Promise.all([
-        fetch(`${API_URL}/root-topics`),
-        fetch(`${API_URL}/statistics`)
+        fetch(`${API_URL}/sujets-racines`),
+        fetch(`${API_URL}/statistiques`)
       ]);
       
-      if (!topicsRes.ok || !statsRes.ok) {
-        throw new Error('API connection error');
+      if (!topicsRes.ok) {
+        throw new Error(`Topics API error: ${topicsRes.status}`);
+      }
+      if (!statsRes.ok) {
+        throw new Error(`Stats API error: ${statsRes.status}`);
       }
       
       const topicsData = await topicsRes.json();
@@ -1076,6 +1084,7 @@ const App = () => {
       setStats(statsData);
       setLoading(false);
     } catch (err) {
+      console.error('Fetch error:', err);
       setError(err.message);
       setLoading(false);
     }
@@ -1091,7 +1100,7 @@ const App = () => {
     } else {
       const term = searchTerm.toLowerCase();
       const filtered = topics.filter(topic => 
-        topic.title.toLowerCase().includes(term) ||
+        (topic.titre || topic.title).toLowerCase().includes(term) ||
         (topic.description && topic.description.toLowerCase().includes(term))
       );
       setFilteredTopics(filtered);
@@ -1175,7 +1184,7 @@ const App = () => {
           <div className="header-content">
             <div className="logo-section">
               <img 
-                src="https://avocarbon-action-plan.azurewebsites.net/assets/favicon-32-removebg-preview.png" 
+                src="https://i.imgur.com/9xYK8Zm.png" 
                 alt="AvoCarbon Group" 
                 className="logo"
               />
@@ -1207,7 +1216,7 @@ const App = () => {
                 <div className="stat-card-content">
                   <div>
                     <p className="stat-label">Total Topics</p>
-                    <p className="stat-value">{stats.total_topics}</p>
+                    <p className="stat-value">{stats.total_sujets || stats.total_topics}</p>
                   </div>
                   <Folder size={48} className="stat-icon" />
                 </div>
