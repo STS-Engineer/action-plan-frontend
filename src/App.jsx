@@ -44,9 +44,9 @@ const styles = `
   }
 
   .logo {
-    height: 60px;
+    height: 90px;
     width: auto;
-    background: white;
+    
     padding: 0.5rem 1rem;
     border-radius: 0.5rem;
   }
