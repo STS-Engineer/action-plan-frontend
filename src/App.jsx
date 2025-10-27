@@ -44,11 +44,13 @@ const styles = `
   }
 
   .logo {
-    height: 120px;
+    height: 100px;
     width: auto;
     background: white;
-    padding: 0.5rem 5rem;
+    padding: 0.5rem 1rem;
     border-radius: 0.5rem;
+    padding-right: 10rem;
+
   }
 
   .header-title {
