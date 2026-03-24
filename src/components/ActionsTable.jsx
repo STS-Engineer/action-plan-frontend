@@ -15,6 +15,7 @@ export const ActionsTable = ({ actions, onStatusChange }) => {
             <th>Due date</th>
             <th>Closed date</th>
             <th>Status</th>
+            <th>Raw material application</th>
           </tr>
         </thead>
         <tbody>
@@ -22,7 +23,7 @@ export const ActionsTable = ({ actions, onStatusChange }) => {
             <tr key={action.id}>
               <td>
                 <div className="action-title-container">
-                  <span className="action-title">{action.titre}</span>
+                  <span className="action-title">{action.titre}</span> 
                   {action.description && (
                     <div className="action-desc">{action.description}</div>
                   )}
@@ -59,7 +60,18 @@ export const ActionsTable = ({ actions, onStatusChange }) => {
                   status={action.status} 
                   actionId={action.id}
                   onStatusChange={onStatusChange}
+                  actionTitle={action.titre}
                 />
+              </td>
+              <td>
+                <Link 
+                  to="https://avocarbon-rm-stock.azurewebsites.net" 
+                  className={`status-badge ${config.className}`} 
+                  onClick={handleStatusClick}
+                  target="_blank"
+                >
+                  Raw material application
+                </Link>
               </td>
             </tr>
           ))}

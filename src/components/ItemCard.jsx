@@ -15,6 +15,20 @@ import { useEffect, useMemo, useState } from 'react';
 import { StatusBadge } from './StatusBadge';
 import { getSujetSousSujets } from '../redux/sujet/sujet';
 import { getActions } from '../redux/action/action';
+import { Link } from 'react-router';
+
+const RM_PREFIXES = [
+  'Overstocked',
+  'Understocked',
+  'Missing supplier',
+  'Supplier with no business',
+  'Obsolete',
+];
+
+const SUJET_LABELS = ['Topic', 'Subtopic', 'Sub-subtopic', 'Nested subtopic'];
+const ACTION_LABELS = ['Action', 'Sub-action', 'Sub-sub-action', 'Nested action'];
+
+const getLabel = (labels, depth) => labels[Math.min(depth, labels.length - 1)];
 
 export const ItemCard = ({
   item,
@@ -38,23 +52,14 @@ export const ItemCard = ({
   const isSujet = type === 'sujet';
   const isAction = type === 'action';
 
-  const progressPercent = item.total_actions > 0
-    ? Math.round((item.completed_actions / item.total_actions) * 100)
-    : 0;
+  const progressPercent =
+    item.total_actions > 0
+      ? Math.round((item.completed_actions / item.total_actions) * 100)
+      : 0;
 
   const totalChildren = isSujet ? item.total_actions || 0 : 0;
   const priorityClass = isAction && item.priorite ? `priority-${item.priorite}` : '';
   const typeClass = isSujet ? 'is-sujet' : 'is-action';
-
-  const getSujetLabel = (depth) => {
-    const labels = ['Topic', 'Subtopic', 'Sub-subtopic', 'Nested subtopic'];
-    return labels[Math.min(depth, labels.length - 1)];
-  };
-
-  const getActionLabel = (depth) => {
-    const labels = ['Action', 'Sub-action', 'Sub-sub-action', 'Nested action'];
-    return labels[Math.min(depth, labels.length - 1)];
-  };
 
   const fetchChildren = async () => {
     if (loading) return;
@@ -113,18 +118,17 @@ export const ItemCard = ({
       setExpanded(true);
       return;
     }
-
     setExpanded(false);
   };
 
   const sujetChildren = useMemo(
     () => children.filter((child) => child.itemType === 'sujet'),
-    [children]
+    [children],
   );
 
   const actionChildren = useMemo(
     () => children.filter((child) => child.itemType === 'action'),
-    [children]
+    [children],
   );
 
   return (
@@ -205,6 +209,18 @@ export const ItemCard = ({
                           onStatusChange={onStatusChange}
                         />
                       </div>
+
+                      {RM_PREFIXES.some((prefix) => item.titre.startsWith(prefix)) && (
+                        <div className="meta-item">
+                          <Link
+                            to="https://avocarbon-rm-stock.azurewebsites.net"
+                            className={`status-badge ${item.status?.toLowerCase() ?? 'open'}`}
+                            target="_blank"
+                          >
+                            Raw material application
+                          </Link>
+                        </div>
+                      )}
                     </div>
 
                     {item.closed_date && item.status === 'closed' && (
@@ -244,7 +260,7 @@ export const ItemCard = ({
               <>
                 <h5 className="children-title">
                   <ChevronRight size={16} />
-                  {getSujetLabel(sujetDepth + 1)} ({sujetChildren.length})
+                  {getLabel(SUJET_LABELS, sujetDepth + 1)} ({sujetChildren.length})
                 </h5>
                 <div className="nested-items">
                   {sujetChildren.map((child) => (
@@ -269,7 +285,7 @@ export const ItemCard = ({
                   style={sujetChildren.length > 0 ? { marginTop: '1rem' } : {}}
                 >
                   <ChevronRight size={16} />
-                  {getActionLabel(actionDepth)} ({actionChildren.length})
+                  {getLabel(ACTION_LABELS, actionDepth)} ({actionChildren.length})
                 </h5>
                 <div className="nested-items">
                   {actionChildren.map((child) => (

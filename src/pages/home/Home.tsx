@@ -5,34 +5,43 @@ import { getStatistics, getSujetsRacineList } from '../../redux/sujet/sujet';
 import { AlertCircle, CheckCircle2, Clock, Folder, FolderOpen, Search } from 'lucide-react';
 import { ItemCard } from '../../components/ItemCard';
 import { Sujet } from '../../redux/sujet/sujet-slice-types';
+import Select from 'react-select';
+import { getEmails } from '../../redux/action/action';
 
 const Home = () => {
   const dispatch = useDispatch();
   const { sujetsRacineList = [], statistics } = useSelector((state: any) => state.sujet);
+  const { emailsList = [] } = useSelector((state: any) => state.action);
 
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [email, setEmail] = useState<string | null>(null);
 
   const fetchData = async () => {
     try {
-      setLoading(true);
-      setError(null);
+        const isInitial = !sujetsRacineList.length && !statistics;
+        if (isInitial) setInitialLoading(true);
+        else setRefreshing(true);
+        setError(null);
 
-      await Promise.all([
-        getSujetsRacineList(dispatch),
+        await Promise.all([
+        getSujetsRacineList(dispatch, email),
         getStatistics(dispatch),
-      ]);
+        getEmails(dispatch),
+        ]);
     } catch (err: any) {
-      setError(err?.message || 'Failed to load data');
+        setError(err?.message || 'Failed to load data');
     } finally {
-      setLoading(false);
+        setInitialLoading(false);
+        setRefreshing(false);
     }
   };
 
   useEffect(() => {
     fetchData();
-  }, [dispatch]);
+  }, [dispatch, email]);
 
   const filteredSujets = useMemo(() => {
     if (!searchTerm.trim()) return sujetsRacineList;
@@ -45,14 +54,14 @@ const Home = () => {
     );
   }, [searchTerm, sujetsRacineList]);
 
-  if (loading) {
+  if (initialLoading) {
     return (
-      <div className="loading-container">
+        <div className="loading-container">
         <div className="loading-content">
-          <div className="spinner"></div>
-          <p className="loading-text">Loading…</p>
+            <div className="spinner"></div>
+            <p className="loading-text">Loading…</p>
         </div>
-      </div>
+        </div>
     );
   }
 
@@ -101,6 +110,17 @@ const Home = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
+          <div style={{ flex: 1, maxWidth: 360 }}>
+            <Select
+                options={emailsList?.map((email: any) => ({
+                    value: email,
+                    label: email,
+                }))}
+                placeholder="Filter by email..."
+                isClearable
+                onChange={(e: any) => setEmail(e?.value || null)}
+                />
+            </div>
         </div>
 
         {statistics && (

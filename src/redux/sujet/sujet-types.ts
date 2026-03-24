@@ -6,6 +6,7 @@ export type GetSujetsListRequestAction = (
 
 export type GetSujetsRacineListRequestAction = (
     dispatch: Dispatch<any>,
+    email: string | null
 ) => Promise<boolean>;
 
 export type Statistique = (

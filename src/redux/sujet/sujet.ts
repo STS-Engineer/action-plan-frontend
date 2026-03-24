@@ -16,9 +16,9 @@ export const getSujetsList: GetSujetsListRequestAction = async (dispatch) => {
     };
 }
 
-export const getSujetsRacineList: GetSujetsRacineListRequestAction = async (dispatch) => {
+export const getSujetsRacineList: GetSujetsRacineListRequestAction = async (dispatch, email) => {
     dispatch(getSujetsRacineListRequest());
-    let url = `/api/action_plan_sujet/sujets-racine`;
+    let url = `/api/action_plan_sujet/sujets-racine?email=${email || ''}`;
 
     try {
         let response = await axiosInstance.get(url);
