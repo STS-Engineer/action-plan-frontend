@@ -15,21 +15,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Use Node.js
-        uses: actions/setup-node@v4
+      - name: Set up Node.js version
+        uses: actions/setup-node@v3
         with:
-          node-version: 20   # stable for Vite; 22 is fine too
-          cache: npm
-
-      - name: Install & Build
-        env:
-          # Optional: set your production API endpoint here (or use repo secret FRONTEND_API_URL)
-          VITE_API_URL: ${{ secrets.FRONTEND_API_URL }}
+          node-version: '22.x'
+      
+      - name: Create .env file
         run: |
-          npm ci
-          npm run build
-          # Ensure dist exists
-          test -d dist && echo "Build ok" || (echo "No dist folder" && exit 1)
+          echo "VITE_API_URL=${{ secrets.VITE_API_URL }}" > .env
+
+      - name: Check env file
+        run: |
+          cat .env
+
+      - name: npm install, build, and test
+        run: |
+          npm install
+          npm run build --if-present
+          npm run test --if-present
 
       - name: Azure Login
         uses: azure/login@v2
@@ -43,4 +46,4 @@ jobs:
         with:
           app-name: avocarbon-action-plan
           slot-name: Production
-          package: dist              # <-- deploy ONLY the built files
+          package: dist
