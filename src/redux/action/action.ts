@@ -9,10 +9,10 @@ export const getActions: GetActionsBySujet = async (dispatch, sujet_id) => {
     try {
         let response = await axiosInstance.get(url);
         dispatch(getActionsBySujetSuccess(response.data));
-        return true;
+        return response.data;
     } catch (error) {
         dispatch(getActionsBySujetFailure(error));
-        return false;
+        throw error;
     };
 }
 

@@ -40,9 +40,6 @@ export const ItemCard = ({
 }) => {
   const dispatch = useDispatch();
 
-  const { sujetSousSujets, error: sujetError } = useSelector((state) => state.sujet);
-  const { actionsList, error: actionError } = useSelector((state) => state.action);
-
   const [expanded, setExpanded] = useState(false);
   const [loading, setLoading] = useState(false);
   const [children, setChildren] = useState([]);
@@ -70,14 +67,15 @@ export const ItemCard = ({
 
     try {
       if (isSujet) {
-        const [sousSujetsOk, actionsOk] = await Promise.all([
+        const [sousSujets, actions] = await Promise.all([
           getSujetSousSujets(dispatch, item.id),
           getActions(dispatch, item.id),
         ]);
 
-        if (!sousSujetsOk || !actionsOk) {
-          throw new Error('Failed to load topic content');
-        }
+        const mappedSousSujets = (sousSujets || []).map((s) => ({ ...s, itemType: 'sujet' }));
+        const mappedActions = (actions || []).map((a) => ({ ...a, itemType: 'action' }));
+
+        setChildren([...mappedSousSujets, ...mappedActions]);
       } else {
         setChildren([]);
       }
@@ -89,28 +87,6 @@ export const ItemCard = ({
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    if (!isSujet) return;
-    if (loadedItemId !== item.id) return;
-
-    const mappedSousSujets = Array.isArray(sujetSousSujets)
-      ? sujetSousSujets.map((s) => ({ ...s, itemType: 'sujet' }))
-      : [];
-
-    const mappedActions = Array.isArray(actionsList)
-      ? actionsList.map((a) => ({ ...a, itemType: 'action' }))
-      : [];
-
-    setChildren([...mappedSousSujets, ...mappedActions]);
-  }, [sujetSousSujets, actionsList, loadedItemId, item.id, isSujet]);
-
-  useEffect(() => {
-    if (sujetError || actionError) {
-      setError('Failed to load content');
-      setLoading(false);
-    }
-  }, [sujetError, actionError]);
 
   const handleToggle = async () => {
     if (!expanded) {

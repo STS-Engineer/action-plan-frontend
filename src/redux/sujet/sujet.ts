@@ -50,10 +50,10 @@ export const getSujetSousSujets: GetSujetSousSujetsListRequestAction = async (di
     try {
         let response = await axiosInstance.get(url);
         dispatch(getSujetSousSujetsListSuccess(response.data));
-        return true;
+        return response.data;
     }
     catch (error) {
         dispatch(getSujetSousSujetsListFailure(error));
-        return false;
+        throw error
     };
 }
