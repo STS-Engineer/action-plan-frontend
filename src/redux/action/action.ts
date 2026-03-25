@@ -1,6 +1,6 @@
 import axiosInstance from "../../services/axiosInstance";
-import { getActionsBySujetFailure, getActionsBySujetRequest, getActionsBySujetSuccess, getEmailsFailure, getEmailsRequest, getEmailsSuccess } from "./action-slice";
-import { GetActionsBySujet, GetEmails } from "./action-types";
+import { getActionsBySujetFailure, getActionsBySujetRequest, getActionsBySujetSuccess, getEmailsFailure, getEmailsRequest, getEmailsSuccess, updateActionStatusFailure, updateActionStatusRequest, updateActionStatusSuccess } from "./action-slice";
+import { GetActionsBySujet, GetEmails, UpdateActionStatus } from "./action-types";
 
 export const getActions: GetActionsBySujet = async (dispatch, sujet_id) => {
     dispatch(getActionsBySujetRequest());
@@ -26,6 +26,24 @@ export const getEmails: GetEmails = async (dispatch) => {
         return true;
     } catch (error) {
         dispatch(getEmailsFailure(error));
+        return false;
+    };
+}
+
+export const updateActionStatus: UpdateActionStatus = async (dispatch, action_id, status) => {
+    dispatch(updateActionStatusRequest());
+    let url = `/api/action_plan_action/actions/${action_id}/status`;
+    const data = {
+        status: status
+    }
+
+    console.log(data);
+    try {
+        let response = await axiosInstance.put(url, data);
+        dispatch(updateActionStatusSuccess(response.data));
+        return true;
+    } catch (error) {
+        dispatch(updateActionStatusFailure(error));
         return false;
     };
 }

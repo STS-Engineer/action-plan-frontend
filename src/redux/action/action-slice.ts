@@ -1,7 +1,7 @@
 import { createSlice } from "@reduxjs/toolkit";
+import { ActionState } from "./action-slice-types";
 
-const initialState = {
-    sujet : null,
+const initialState: ActionState = {
     actionsList : [],
     emailsList : [],
     success: false,
@@ -35,6 +35,23 @@ const actionSlice = createSlice({
         getEmailsFailure(state, action) {
             state.error = action.payload;
             state.success = false;
+        },
+        updateActionStatusRequest(state) {
+            state.success = false;
+            state.error = null;
+        },
+        updateActionStatusSuccess(state, action) {
+            state.success = true;
+            state.actionsList = state.actionsList.map((actionItem: any) => {
+                if (actionItem.id === action.payload.id) {
+                    return action.payload;
+                }
+                return actionItem;
+            });
+        },
+        updateActionStatusFailure(state, action) {
+            state.error = action.payload;
+            state.success = false;
         }
     }
 })
@@ -45,7 +62,10 @@ export const {
     getActionsBySujetFailure,
     getEmailsRequest,
     getEmailsSuccess,
-    getEmailsFailure
+    getEmailsFailure,
+    updateActionStatusRequest,
+    updateActionStatusSuccess,
+    updateActionStatusFailure
 } = actionSlice.actions;
 
 export default actionSlice.reducer;

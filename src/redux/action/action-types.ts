@@ -8,3 +8,9 @@ export type GetActionsBySujet = (
 export type GetEmails = (
     dispatch: Dispatch<any>
 ) => Promise<boolean>;
+
+export type UpdateActionStatus = (
+    dispatch: Dispatch<any>,
+    action_id: number,
+    status: string
+) => Promise<boolean>;

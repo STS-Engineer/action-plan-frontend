@@ -14,7 +14,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useEffect, useMemo, useState } from 'react';
 import { StatusBadge } from './StatusBadge';
 import { getSujetSousSujets } from '../redux/sujet/sujet';
-import { getActions } from '../redux/action/action';
+import { getActions, updateActionStatus } from '../redux/action/action';
 import { Link } from 'react-router';
 
 const SUJET_LABELS = ['Topic', 'Subtopic', 'Sub-subtopic', 'Nested subtopic'];
@@ -27,8 +27,7 @@ export const ItemCard = ({
   type = 'sujet',
   depth = 0,
   sujetDepth = 0,
-  actionDepth = 0,
-  onStatusChange = () => {},
+  actionDepth = 0
 }) => {
   const dispatch = useDispatch();
   const [expanded, setExpanded] = useState(false);
@@ -36,6 +35,7 @@ export const ItemCard = ({
   const [children, setChildren] = useState([]);
   const [error, setError] = useState(null);
   const [loadedItemId, setLoadedItemId] = useState(null);
+  const [localStatus, setLocalStatus] = useState(item.status);
 
   const isSujet = type === 'sujet';
   const isAction = type === 'action';
@@ -97,6 +97,32 @@ export const ItemCard = ({
     () => children.filter((child) => child.itemType === 'action'),
     [children],
   );
+
+  const onStatusChange = async (actionId, newStatus) => {
+    const success = await updateActionStatus(dispatch, actionId, newStatus);
+
+    if (!success) return;
+
+    if (item.id === actionId) {
+      setLocalStatus(newStatus);
+    }
+
+    setChildren((prev) =>
+      prev.map((child) =>
+        child.id === actionId
+          ? {
+              ...child,
+              status: newStatus,
+              closed_date: newStatus === 'closed' ? new Date().toISOString() : null,
+            }
+          : child
+      )
+    );
+  };
+
+  useEffect(() => {
+    setLocalStatus(item.status);
+  }, [item.status]);
 
   return (
     <div className="item-card" style={{ marginLeft: `${depth * 20}px` }}>
@@ -171,7 +197,7 @@ export const ItemCard = ({
 
                       <div className="meta-item">
                         <StatusBadge
-                          status={item.status}
+                          status={localStatus}
                           actionId={item.id}
                           onStatusChange={onStatusChange}
                         />
@@ -181,7 +207,7 @@ export const ItemCard = ({
                         <div className="meta-item">
                           <Link
                             to="https://avocarbon-rm-stock.azurewebsites.net"
-                            className={`status-badge ${item.status?.toLowerCase() ?? 'open'}`}
+                            className={`status-badge ${localStatus?.toLowerCase() ?? 'open'}`}
                             target="_blank"
                           >
                             Raw material application
@@ -192,7 +218,7 @@ export const ItemCard = ({
                         <div className="meta-item">
                           <Link
                             to="https://avocarbon-customer-complaint.azurewebsites.net/complaints"
-                            className={`status-badge ${item.status?.toLowerCase() ?? 'open'}`}
+                            className={`status-badge ${localStatus?.toLowerCase() ?? 'open'}`}
                             target="_blank"
                           >
                             Corrective action application
@@ -201,7 +227,7 @@ export const ItemCard = ({
                       )}
                     </div>
 
-                    {item.closed_date && item.status === 'closed' && (
+                    {item.closed_date && localStatus === 'closed' && (
                       <div className="closed-date-info">
                         <Clock size={14} />
                         <span>
