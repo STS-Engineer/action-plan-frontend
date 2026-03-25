@@ -17,14 +17,6 @@ import { getSujetSousSujets } from '../redux/sujet/sujet';
 import { getActions } from '../redux/action/action';
 import { Link } from 'react-router';
 
-const RM_PREFIXES = [
-  'Overstocked',
-  'Understocked',
-  'Missing supplier',
-  'Supplier with no business',
-  'Obsolete',
-];
-
 const SUJET_LABELS = ['Topic', 'Subtopic', 'Sub-subtopic', 'Nested subtopic'];
 const ACTION_LABELS = ['Action', 'Sub-action', 'Sub-sub-action', 'Nested action'];
 
@@ -39,7 +31,6 @@ export const ItemCard = ({
   onStatusChange = () => {},
 }) => {
   const dispatch = useDispatch();
-
   const [expanded, setExpanded] = useState(false);
   const [loading, setLoading] = useState(false);
   const [children, setChildren] = useState([]);
@@ -186,7 +177,7 @@ export const ItemCard = ({
                         />
                       </div>
 
-                      {RM_PREFIXES.some((prefix) => item.titre.startsWith(prefix)) && (
+                      {item.rm_stock_app && (
                         <div className="meta-item">
                           <Link
                             to="https://avocarbon-rm-stock.azurewebsites.net"
@@ -194,6 +185,17 @@ export const ItemCard = ({
                             target="_blank"
                           >
                             Raw material application
+                          </Link>
+                        </div>
+                      )}
+                      {item.corrective_action_app && (
+                        <div className="meta-item">
+                          <Link
+                            to="https://avocarbon-customer-complaint.azurewebsites.net/complaints"
+                            className={`status-badge ${item.status?.toLowerCase() ?? 'open'}`}
+                            target="_blank"
+                          >
+                            Corrective action application
                           </Link>
                         </div>
                       )}
