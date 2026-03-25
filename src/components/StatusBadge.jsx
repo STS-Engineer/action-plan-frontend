@@ -1,9 +1,9 @@
 import { Edit2 } from "lucide-react";
 import { useState } from "react";
 
-export const StatusBadge = ({ status, onStatusChange, actionId }) => {
+export const StatusBadge = ({ status, onStatusChange, actionId, onMenuToggle }) => {
   const [showMenu, setShowMenu] = useState(false);
-
+  
   const statusConfig = {
     blocked: { text: 'Blocked', className: 'blocked' },
     closed: { text: 'Closed', className: 'closed' },
@@ -16,12 +16,15 @@ export const StatusBadge = ({ status, onStatusChange, actionId }) => {
 
   const handleStatusClick = (e) => {
     e.stopPropagation();
-    setShowMenu(!showMenu);
+    const next = !showMenu;
+    setShowMenu(next);
+    onMenuToggle?.(next);
   };
 
   const handleStatusSelect = async (newStatus, e) => {
     e.stopPropagation();
     setShowMenu(false);
+    onMenuToggle?.(false);
     if (onStatusChange) {
       await onStatusChange(actionId, newStatus);
     }
@@ -33,23 +36,15 @@ export const StatusBadge = ({ status, onStatusChange, actionId }) => {
         <Edit2 size={12} />
         {config.text}
       </span>
+
       {showMenu && (
         <div className="status-menu">
-          <div className="status-option" onClick={(e) => handleStatusSelect('open', e)}>
-            Open
-          </div>
-          <div className="status-option" onClick={(e) => handleStatusSelect('closed', e)}>
-            Closed
-          </div>
-          <div className="status-option" onClick={(e) => handleStatusSelect('blocked', e)}>
-            Blocked
-          </div>
-          <div className="status-option" onClick={(e) => handleStatusSelect('overdue', e)}>
-            Overdue
-          </div>
+          <div className="status-option" onClick={(e) => handleStatusSelect('open', e)}>Open</div>
+          <div className="status-option" onClick={(e) => handleStatusSelect('closed', e)}>Closed</div>
+          <div className="status-option" onClick={(e) => handleStatusSelect('blocked', e)}>Blocked</div>
+          <div className="status-option" onClick={(e) => handleStatusSelect('overdue', e)}>Overdue</div>
         </div>
       )}
     </div>
   );
-}
-
+};

@@ -36,6 +36,7 @@ export const ItemCard = ({
   const [error, setError] = useState(null);
   const [loadedItemId, setLoadedItemId] = useState(null);
   const [localStatus, setLocalStatus] = useState(item.status);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const isSujet = type === 'sujet';
   const isAction = type === 'action';
@@ -125,7 +126,7 @@ export const ItemCard = ({
   }, [item.status]);
 
   return (
-    <div className="item-card" style={{ marginLeft: `${depth * 20}px` }}>
+    <div className={`item-card ${menuOpen ? 'item-card-menu-open' : ''}`} style={{ marginLeft: `${depth * 20}px` }}>
       <div className={`item-card-inner ${typeClass} ${priorityClass}`}>
         <div className="item-header" onClick={handleToggle}>
           <div className="item-header-content">
@@ -176,6 +177,14 @@ export const ItemCard = ({
 
                 {isAction && (
                   <div className="action-title-container">
+                    <div className="action-status-top" onClick={(e) => e.stopPropagation()}>
+                      <StatusBadge
+                        status={localStatus}
+                        actionId={item.id}
+                        onStatusChange={onStatusChange}
+                        onMenuToggle={setMenuOpen}
+                      />
+                    </div>
                     <span className="action-title">{item.titre}</span>
 
                     {item.description && <div className="action-desc">{item.description}</div>}
@@ -193,14 +202,6 @@ export const ItemCard = ({
                             ? new Date(item.due_date).toLocaleDateString('en-GB')
                             : '—'}
                         </span>
-                      </div>
-
-                      <div className="meta-item">
-                        <StatusBadge
-                          status={localStatus}
-                          actionId={item.id}
-                          onStatusChange={onStatusChange}
-                        />
                       </div>
 
                       {item.rm_stock_app && (
