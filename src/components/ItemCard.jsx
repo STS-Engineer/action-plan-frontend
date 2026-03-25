@@ -126,7 +126,7 @@ export const ItemCard = ({
   }, [item.status]);
 
   return (
-    <div className={`item-card ${menuOpen ? 'item-card-menu-open' : ''}`} style={{ marginLeft: `${depth * 20}px` }}>
+    <div className={`item-card ${menuOpen ? 'item-card-menu-open' : ''}`} style={{ marginLeft: `${depth * 20}px`, marginTop: '0.5rem' }}>
       <div className={`item-card-inner ${typeClass} ${priorityClass}`}>
         <div className="item-header" onClick={handleToggle}>
           <div className="item-header-content">
