@@ -47,3 +47,14 @@ export const updateActionStatus: UpdateActionStatus = async (dispatch, action_id
         return false;
     };
 }
+export const smartSearchActions = async (query: string) => {
+    const url = `/api/action_plan_action/search?query=${encodeURIComponent(query)}`;
+
+    try {
+        const response = await axiosInstance.get(url);
+        return response.data;
+    } catch (error) {
+        console.error("Smart search failed", error);
+        return [];
+    }
+};

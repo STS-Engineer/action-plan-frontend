@@ -181,6 +181,28 @@ body {
   padding: 1.5rem 2rem 3rem;
 }
 
+.view-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.view-tab {
+  border: 1px solid #cbd5e1;
+  background: white;
+  color: #334155;
+  padding: 10px 16px;
+  border-radius: 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.view-tab.active {
+  background: #2563eb;
+  color: white;
+  border-color: #2563eb;
+}
+
 /* ============================================
    SEARCH
    ============================================ */
@@ -930,4 +952,84 @@ body {
   .item-title {
     font-size: 0.875rem;
   }
+}
+.smart-search-results {
+  margin-bottom: 2rem;
+}
+
+.smart-results-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+}
+
+.smart-results-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.smart-results-table thead {
+  background: #f8fafc;
+}
+
+.smart-results-table th {
+  padding: 14px 16px;
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #475569;
+  text-transform: uppercase;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.smart-results-table td {
+  padding: 14px 16px;
+  color: #334155;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: top;
+}
+
+.smart-results-table tr:hover {
+  background: #f8fafc;
+}
+
+.smart-action-title {
+  font-weight: 800;
+  color: #0f172a;
+}
+.top-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logged-user {
+  font-weight: 800;
+  color: #334155;
+  background: white;
+  padding: 10px 14px;
+  border-radius: 12px;
+}
+
+.dashboard-link {
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: #2563eb;
+  color: white;
+  text-decoration: none;
+  font-weight: 800;
+}
+
+.logout-button {
+  border: none;
+  background: #dc2626;
+  color: white;
+  padding: 10px 14px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 800;
 }

@@ -57,3 +57,17 @@ export const getSujetSousSujets: GetSujetSousSujetsListRequestAction = async (di
         throw error
     };
 }
+export const getTeamSujetsRacineList = async (dispatch: any, email: string) => {
+    dispatch(getSujetsRacineListRequest());
+
+    let url = `/api/action_plan_sujet/team-sujets-racine?email=${email}`;
+
+    try {
+        let response = await axiosInstance.get(url);
+        dispatch(getSujetsRacineListSuccess(response.data));
+        return true;
+    } catch (error) {
+        dispatch(getSujetsRacineListFailure(error));
+        return false;
+    }
+}

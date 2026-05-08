@@ -284,29 +284,83 @@ export const ItemCard = ({
             )}
 
             {actionChildren.length > 0 && (
-              <>
-                <h5
-                  className="children-title"
-                  style={sujetChildren.length > 0 ? { marginTop: '1rem' } : {}}
-                >
-                  <ChevronRight size={16} />
-                  {getLabel(ACTION_LABELS, actionDepth)} ({actionChildren.length})
-                </h5>
-                <div className="nested-items">
-                  {actionChildren.map((child) => (
-                    <ItemCard
-                      key={`${child.itemType}-${child.id}`}
-                      item={child}
-                      type={child.itemType}
-                      depth={0}
-                      sujetDepth={sujetDepth}
-                      actionDepth={actionDepth + 1}
-                      onStatusChange={onStatusChange}
-                    />
-                  ))}
-                </div>
-              </>
-            )}
+  <>
+    <h5
+      className="children-title"
+      style={sujetChildren.length > 0 ? { marginTop: '1rem' } : {}}
+    >
+      <ChevronRight size={16} />
+      {getLabel(ACTION_LABELS, actionDepth)} ({actionChildren.length})
+    </h5>
+
+    <div className="actions-table-wrapper">
+      <table className="actions-table">
+        <thead>
+              <tr>
+        <th>Action</th>
+        <th>Description</th>
+        <th>Responsable</th>
+        <th>Due date</th>
+        <th>Application</th>
+        <th>Status</th>
+      </tr>
+        </thead>
+
+        <tbody>
+          {actionChildren.map((child) => (
+           <tr key={`${child.itemType}-${child.id}`}>
+  <td className="action-table-title">
+    {child.titre || '—'}
+  </td>
+
+  <td>{child.description || '—'}</td>
+
+  <td>{child.responsable || '—'}</td>
+
+  <td>
+    {child.due_date
+      ? new Date(child.due_date).toLocaleDateString('en-GB')
+      : '—'}
+  </td>
+
+  <td>
+    {child.rm_stock_app && (
+      <Link
+        to="https://avocarbon-rm-stock.azurewebsites.net"
+        className={`status-badge ${child.status?.toLowerCase() ?? 'open'}`}
+        target="_blank"
+      >
+        Raw material
+      </Link>
+    )}
+
+    {child.corrective_action_app && (
+      <Link
+        to="https://avocarbon-customer-complaint.azurewebsites.net/complaints"
+        className={`status-badge ${child.status?.toLowerCase() ?? 'open'}`}
+        target="_blank"
+      >
+        Corrective action
+      </Link>
+    )}
+
+    {!child.rm_stock_app && !child.corrective_action_app && '—'}
+  </td>
+
+  <td>
+    <StatusBadge
+      status={child.status}
+      actionId={child.id}
+      onStatusChange={onStatusChange}
+    />
+  </td>
+</tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </>
+)}
           </div>
         )}
 

@@ -1,13 +1,13 @@
 import { useDispatch, useSelector } from 'react-redux';
 import './Home.css';
 import { useEffect, useMemo, useState } from 'react';
-import { getStatistics, getSujetsRacineList } from '../../redux/sujet/sujet';
+import { getStatistics, getSujetsRacineList, getTeamSujetsRacineList } from '../../redux/sujet/sujet';
 import { AlertCircle, CheckCircle2, Clock, Folder, FolderOpen, Search } from 'lucide-react';
 import { ItemCard } from '../../components/ItemCard';
-import { Sujet } from '../../redux/sujet/sujet-slice-types';
+import { StatusBadge } from '../../components/StatusBadge';
+import { updateActionStatus } from '../../redux/action/action';import { Sujet } from '../../redux/sujet/sujet-slice-types';
 import Select from 'react-select';
-import { getEmails } from '../../redux/action/action';
-
+import { getEmails, smartSearchActions } from '../../redux/action/action';
 const Home = () => {
   const dispatch = useDispatch();
   const { sujetsRacineList = [], statistics } = useSelector((state: any) => state.sujet);
@@ -17,8 +17,19 @@ const Home = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [email, setEmail] = useState<string | null>(null);
+  const [smartResults, setSmartResults] = useState<any[]>([]);
+  const [smartSearchLoading, setSmartSearchLoading] = useState(false);
+  const [viewMode, setViewMode] = useState<"my" | "team">("my");
+  const loggedUser = JSON.parse(localStorage.getItem("user") || "{}");
 
+  const [email, setEmail] = useState<string | null>(loggedUser?.email || null);
+
+const handleLogout = () => {
+  localStorage.removeItem("token");
+  localStorage.removeItem("user");
+
+  window.location.href = "/login";
+};
   const fetchData = async () => {
     try {
         const isInitial = !sujetsRacineList.length && !statistics;
@@ -27,7 +38,9 @@ const Home = () => {
         setError(null);
 
         await Promise.all([
-        getSujetsRacineList(dispatch, email),
+        viewMode === "team"
+          ? getTeamSujetsRacineList(dispatch, loggedUser.email)
+          : getSujetsRacineList(dispatch, loggedUser.email),        
         getStatistics(dispatch),
         getEmails(dispatch),
         ]);
@@ -41,7 +54,26 @@ const Home = () => {
 
   useEffect(() => {
     fetchData();
-  }, [dispatch, email]);
+  }, [dispatch, email, viewMode]);
+  useEffect(() => {
+  const runSmartSearch = async () => {
+    if (!searchTerm.trim()) {
+      setSmartResults([]);
+      return;
+    }
+
+    setSmartSearchLoading(true);
+
+    const results = await smartSearchActions(searchTerm);
+    setSmartResults(results);
+
+    setSmartSearchLoading(false);
+  };
+
+  const timeout = setTimeout(runSmartSearch, 400);
+
+  return () => clearTimeout(timeout);
+}, [searchTerm]);
 
   const filteredSujets = useMemo(() => {
     if (!searchTerm.trim()) return sujetsRacineList;
@@ -81,24 +113,57 @@ const Home = () => {
   }
 
   return (
-    <div className="app-container">
-      <div className="header-top">
-        <div className="header-content">
-          <div className="logo-section">
-            <img
-              src="https://avocarbon-action-plan.azurewebsites.net/assets/favicon-32-removebg-preview.png"
-              alt="AvoCarbon Group"
-              className="logo"
-            />
-            <div className="header-title">
-              <h1>Action Plan Management</h1>
-              <p>Manage and track your projects and actions</p>
-            </div>
+  <div className="app-container">
+    <div className="header-top">
+
+      <div className="header-content">
+        <div className="logo-section">
+          <img
+            src="https://avocarbon-action-plan.azurewebsites.net/assets/favicon-32-removebg-preview.png"
+            alt="AvoCarbon Group"
+            className="logo"
+          />
+
+          <div className="header-title">
+            <h1>Action Plan Management</h1>
+            <p>Manage and track your projects and actions</p>
           </div>
+        </div>
+
+        <div className="top-actions">
+          <span className="logged-user">
+            {loggedUser?.full_name || loggedUser?.email}
+          </span>
+
+          <a href="/dashboard" className="dashboard-link">
+            Dashboard
+          </a>
+
+          <button className="logout-button" onClick={handleLogout}>
+            Logout
+          </button>
         </div>
       </div>
 
+    </div>
+
       <div className="container">
+        <div className="view-tabs">
+          <button
+            className={viewMode === "my" ? "view-tab active" : "view-tab"}
+            onClick={() => setViewMode("my")}
+          >
+            My Actions
+          </button>
+
+          <button
+            className={viewMode === "team" ? "view-tab active" : "view-tab"}
+            onClick={() => setViewMode("team")}
+          >
+            Team Actions
+          </button>
+        </div>
+
         <div className="search-section">
           <div className="search-wrapper">
             <Search size={20} className="search-icon" />
@@ -168,32 +233,127 @@ const Home = () => {
         )}
 
         <div className="main-content">
-          <h2 className="main-title">
-            <FolderOpen className="main-title-icon" size={32} />
-            All topics
-            <span className="main-title-count">({filteredSujets.length})</span>
-          </h2>
+          {searchTerm.trim() && (
+  <div className="smart-search-results">
+    <h2 className="main-title">
+      <Search className="main-title-icon" size={28} />
+      Smart search results
+      <span className="main-title-count">({smartResults.length})</span>
+    </h2>
 
-          {filteredSujets.length > 0 ? (
-            <div>
-              {filteredSujets.map((sujet: Sujet) => (
-                <ItemCard
-                  key={sujet.id}
-                  item={sujet}
-                  type="sujet"
-                  sujetDepth={0}
-                  actionDepth={0}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="empty-state">
-              <Folder size={64} className="empty-icon" />
-              <p className="empty-text">
-                {searchTerm ? 'No results found' : 'No topics found'}
-              </p>
-            </div>
-          )}
+    {smartSearchLoading ? (
+      <p className="loading-text">Searching...</p>
+    ) : smartResults.length > 0 ? (
+      <div className="actions-table-wrapper">
+       <table className="actions-table">
+          <thead>
+           <tr>
+                <th>Action</th>
+                <th>Description</th>
+                <th>Responsable</th>
+                <th>Due date</th>
+                <th>Application</th>
+                <th>Status</th>
+              </tr>
+          </thead>
+
+         <tbody>
+  {smartResults.map((action: any) => (
+    <tr key={action.id}>
+      <td className="action-table-title">
+        {action.titre || '—'}
+      </td>
+
+      <td>{action.description || '—'}</td>
+
+      <td>{action.responsable || '—'}</td>
+
+      <td>{action.due_date || '—'}</td>
+
+      <td>
+        {action.rm_stock_app && (
+          <a
+            href="https://avocarbon-rm-stock.azurewebsites.net"
+            className={`status-badge ${action.status?.toLowerCase() ?? 'open'}`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Raw material
+          </a>
+        )}
+
+        {action.corrective_action_app && (
+          <a
+            href="https://avocarbon-customer-complaint.azurewebsites.net/complaints"
+            className={`status-badge ${action.status?.toLowerCase() ?? 'open'}`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Corrective action
+          </a>
+        )}
+
+        {!action.rm_stock_app &&
+          !action.corrective_action_app &&
+          '—'}
+      </td>
+
+      <td>
+       <StatusBadge
+  status={action.status}
+  actionId={action.id}
+  onMenuToggle={() => {}}
+  onStatusChange={async (actionId: number, newStatus: string) => {
+    await updateActionStatus(dispatch, actionId, newStatus);
+
+    const results = await smartSearchActions(searchTerm);
+    setSmartResults(results);
+  }}
+/>
+      </td>
+    </tr>
+  ))}
+</tbody>
+        </table>
+      </div>
+    ) : (
+      <div className="empty-state">
+        <Search size={56} className="empty-icon" />
+        <p className="empty-text">No smart search results found</p>
+      </div>
+    )}
+  </div>
+)}
+         {!searchTerm.trim() && (
+  <>
+    <h2 className="main-title">
+      <FolderOpen className="main-title-icon" size={32} />
+      All topics
+      <span className="main-title-count">({filteredSujets.length})</span>
+    </h2>
+
+    {filteredSujets.length > 0 ? (
+      <div>
+        {filteredSujets.map((sujet: Sujet) => (
+          <ItemCard
+            key={sujet.id}
+            item={sujet}
+            type="sujet"
+            sujetDepth={0}
+            actionDepth={0}
+          />
+        ))}
+      </div>
+    ) : (
+      <div className="empty-state">
+        <Folder size={64} className="empty-icon" />
+        <p className="empty-text">
+          {searchTerm ? 'No results found' : 'No topics found'}
+        </p>
+      </div>
+    )}
+  </>
+)}
         </div>
       </div>
     </div>
