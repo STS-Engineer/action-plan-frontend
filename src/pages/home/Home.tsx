@@ -303,8 +303,8 @@ const handleLogout = () => {
   status={action.status}
   actionId={action.id}
   onMenuToggle={() => {}}
-  onStatusChange={async (actionId: number, newStatus: string) => {
-    await updateActionStatus(dispatch, actionId, newStatus);
+  onStatusChange={async (actionId: number, newStatus: string, options: any) => {
+  await updateActionStatus(dispatch, actionId, newStatus, options);
 
     const results = await smartSearchActions(searchTerm);
     setSmartResults(results);

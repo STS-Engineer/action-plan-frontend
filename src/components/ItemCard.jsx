@@ -99,8 +99,8 @@ export const ItemCard = ({
     [children],
   );
 
-  const onStatusChange = async (actionId, newStatus) => {
-    const success = await updateActionStatus(dispatch, actionId, newStatus);
+  const onStatusChange = async (actionId, newStatus, options) => {
+    const success = await updateActionStatus(dispatch, actionId, newStatus, options);
 
     if (!success) return;
 
@@ -352,6 +352,7 @@ export const ItemCard = ({
       status={child.status}
       actionId={child.id}
       onStatusChange={onStatusChange}
+      onMenuToggle={setMenuOpen}
     />
   </td>
 </tr>

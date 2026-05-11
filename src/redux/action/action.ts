@@ -30,23 +30,56 @@ export const getEmails: GetEmails = async (dispatch) => {
     };
 }
 
-export const updateActionStatus: UpdateActionStatus = async (dispatch, action_id, status) => {
-    dispatch(updateActionStatusRequest());
-    let url = `/api/action_plan_action/actions/${action_id}/status`;
-    const data = {
-        status: status
+export const updateActionStatus = async (
+  dispatch: any,
+  action_id: number,
+  status: string,
+  options?: {
+    comment?: string;
+    created_by?: string | null;
+    file?: File | null;
+  }
+) => {
+  dispatch(updateActionStatusRequest());
+
+  try {
+    const statusPayload = {
+      status,
+      comment: options?.comment || null,
+      created_by: options?.created_by || null,
+    };
+
+    const statusResponse = await axiosInstance.put(
+      `/api/action_plan_action/actions/${action_id}/status`,
+      statusPayload
+    );
+
+    if (options?.file) {
+      const formData = new FormData();
+      formData.append("file", options.file);
+
+      if (options?.created_by) {
+        formData.append("uploaded_by", options.created_by);
+      }
+
+      await axiosInstance.post(
+        `/api/action_plan_action/actions/${action_id}/attachments`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
     }
 
-    console.log(data);
-    try {
-        let response = await axiosInstance.put(url, data);
-        dispatch(updateActionStatusSuccess(response.data));
-        return true;
-    } catch (error) {
-        dispatch(updateActionStatusFailure(error));
-        return false;
-    };
-}
+    dispatch(updateActionStatusSuccess(statusResponse.data));
+    return true;
+  } catch (error) {
+    dispatch(updateActionStatusFailure(error));
+    return false;
+  }
+};
 export const smartSearchActions = async (query: string) => {
     const url = `/api/action_plan_action/search?query=${encodeURIComponent(query)}`;
 
