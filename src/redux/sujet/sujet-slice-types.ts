@@ -3,6 +3,7 @@ export interface SujetState {
     sujet: Sujet | null,
     sujetsRacineList: Sujet[],
     sujetSousSujets: Sujet[],
+    homeSummary: HomeSummary | null,
     statistics: Statistics | null,
     success: boolean,
     error: string | null,
@@ -19,7 +20,18 @@ export interface Sujet {
     created_at: string,
     total_actions: number,
     completed_actions: number,
-    overdue_actions: number
+    overdue_actions: number,
+    in_progress_actions: number
+}
+
+export interface HomeSummary {
+    total_sujets: number,
+    total_actions: number,
+    actions_completed: number,
+    actions_overdue: number,
+    actions_in_progress: number,
+    actions_open: number,
+    actions_blocked: number
 }
 
 export interface Statistics {

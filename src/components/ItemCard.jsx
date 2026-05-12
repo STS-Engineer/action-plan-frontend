@@ -10,25 +10,28 @@ import {
   FolderOpen,
   User,
 } from 'lucide-react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useDispatch } from 'react-redux';
 import { useEffect, useMemo, useState } from 'react';
 import { StatusBadge } from './StatusBadge';
 import { getSujetSousSujets } from '../redux/sujet/sujet';
 import { getActions, updateActionStatus } from '../redux/action/action';
 import { Link } from 'react-router';
+import { getActionHomeStatusBucket } from '../utils/actionHomeStatus';
 
 const SUJET_LABELS = ['Topic', 'Subtopic', 'Sub-subtopic', 'Nested subtopic'];
 const ACTION_LABELS = ['Action', 'Sub-action', 'Sub-sub-action', 'Nested action'];
 
 const getLabel = (labels, depth) => labels[Math.min(depth, labels.length - 1)];
 
-export const ItemCard = ({
-  item,
-  type = 'sujet',
-  depth = 0,
-  sujetDepth = 0,
-  actionDepth = 0
-}) => {
+export const ItemCard = (props) => {
+  const {
+    item,
+    type = 'sujet',
+    depth = 0,
+    sujetDepth = 0,
+    actionDepth = 0,
+    statusFilter = null,
+  } = props;
   const dispatch = useDispatch();
   const [expanded, setExpanded] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -94,10 +97,25 @@ export const ItemCard = ({
     [children],
   );
 
-  const actionChildren = useMemo(
-    () => children.filter((child) => child.itemType === 'action'),
-    [children],
-  );
+  const actionChildren = useMemo(() => {
+    return children.filter((child) => {
+      if (child.itemType !== 'action') {
+        return false;
+      }
+
+      const bucket = getActionHomeStatusBucket(child);
+
+      if (!bucket) {
+        return false;
+      }
+
+      if (statusFilter && bucket !== statusFilter) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [children, statusFilter]);
 
   const onStatusChange = async (actionId, newStatus, options) => {
     const success = await updateActionStatus(dispatch, actionId, newStatus, options);
@@ -276,6 +294,7 @@ export const ItemCard = ({
                       depth={0}
                       sujetDepth={sujetDepth + 1}
                       actionDepth={0}
+                      statusFilter={statusFilter}
                       onStatusChange={onStatusChange}
                     />
                   ))}
@@ -296,19 +315,25 @@ export const ItemCard = ({
     <div className="actions-table-wrapper">
       <table className="actions-table">
         <thead>
-              <tr>
-        <th>Action</th>
-        <th>Description</th>
-        <th>Responsable</th>
-        <th>Due date</th>
-        <th>Application</th>
-        <th>Status</th>
-      </tr>
+             <tr>
+              <th>Priority</th>
+              <th>Action</th>
+              <th>Description</th>
+              <th>Responsable</th>
+              <th>Due date</th>
+              <th>Application</th>
+              <th>Status</th>
+</tr>
         </thead>
 
         <tbody>
           {actionChildren.map((child) => (
            <tr key={`${child.itemType}-${child.id}`}>
+  <td>
+    <span className="priority-pill">
+      {child.priority_index ?? child.priorite ?? '—'}
+    </span>
+  </td>
   <td className="action-table-title">
     {child.titre || '—'}
   </td>

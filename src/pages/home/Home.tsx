@@ -1,16 +1,18 @@
 import { useDispatch, useSelector } from 'react-redux';
 import './Home.css';
 import { useEffect, useMemo, useState } from 'react';
-import { getStatistics, getSujetsRacineList, getTeamSujetsRacineList } from '../../redux/sujet/sujet';
+import { getHomeSummary, getSujetsRacineList, getTeamSujetsRacineList } from '../../redux/sujet/sujet';
 import { AlertCircle, CheckCircle2, Clock, Folder, FolderOpen, Search } from 'lucide-react';
 import { ItemCard } from '../../components/ItemCard';
 import { StatusBadge } from '../../components/StatusBadge';
-import { updateActionStatus } from '../../redux/action/action';import { Sujet } from '../../redux/sujet/sujet-slice-types';
+import { updateActionStatus } from '../../redux/action/action';
+import { Sujet } from '../../redux/sujet/sujet-slice-types';
 import Select from 'react-select';
 import { getEmails, smartSearchActions } from '../../redux/action/action';
+import { getActionHomeStatusBucket } from '../../utils/actionHomeStatus';
 const Home = () => {
   const dispatch = useDispatch();
-  const { sujetsRacineList = [], statistics } = useSelector((state: any) => state.sujet);
+  const { homeSummary, sujetsRacineList = [] } = useSelector((state: any) => state.sujet);
   const { emailsList = [] } = useSelector((state: any) => state.action);
 
   const [initialLoading, setInitialLoading] = useState(true);
@@ -20,6 +22,7 @@ const Home = () => {
   const [smartResults, setSmartResults] = useState<any[]>([]);
   const [smartSearchLoading, setSmartSearchLoading] = useState(false);
   const [viewMode, setViewMode] = useState<"my" | "team">("my");
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const loggedUser = JSON.parse(localStorage.getItem("user") || "{}");
 
   const [email, setEmail] = useState<string | null>(loggedUser?.email || null);
@@ -32,16 +35,17 @@ const handleLogout = () => {
 };
   const fetchData = async () => {
     try {
-        const isInitial = !sujetsRacineList.length && !statistics;
+        const isInitial = !sujetsRacineList.length && !homeSummary;
         if (isInitial) setInitialLoading(true);
         else setRefreshing(true);
         setError(null);
+        const scope = viewMode === "team" ? "team" : "my";
 
         await Promise.all([
         viewMode === "team"
-          ? getTeamSujetsRacineList(dispatch, loggedUser.email)
-          : getSujetsRacineList(dispatch, loggedUser.email),        
-        getStatistics(dispatch),
+          ? getTeamSujetsRacineList(dispatch, loggedUser.email, statusFilter)
+          : getSujetsRacineList(dispatch, loggedUser.email, statusFilter),        
+        getHomeSummary(dispatch, loggedUser.email, scope),
         getEmails(dispatch),
         ]);
     } catch (err: any) {
@@ -54,7 +58,7 @@ const handleLogout = () => {
 
   useEffect(() => {
     fetchData();
-  }, [dispatch, email, viewMode]);
+  }, [dispatch, email, statusFilter, viewMode]);
   useEffect(() => {
   const runSmartSearch = async () => {
     if (!searchTerm.trim()) {
@@ -85,6 +89,22 @@ const handleLogout = () => {
       sujet.description?.toLowerCase().includes(term)
     );
   }, [searchTerm, sujetsRacineList]);
+
+  const filteredSmartResults = useMemo(() => {
+    return smartResults.filter((action: any) => {
+      const bucket = getActionHomeStatusBucket(action);
+
+      if (!bucket) {
+        return false;
+      }
+
+      if (statusFilter && bucket !== statusFilter) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [smartResults, statusFilter]);
 
   if (initialLoading) {
     return (
@@ -188,43 +208,52 @@ const handleLogout = () => {
             </div>
         </div>
 
-        {statistics && (
+        {homeSummary && (
           <div className="stats-grid">
             <div className="stat-card stat-card-blue">
               <div className="stat-card-content">
                 <div>
                   <p className="stat-label">Total topics</p>
-                  <p className="stat-value">{statistics.total_sujets}</p>
+                  <p className="stat-value">{homeSummary.total_sujets}</p>
                 </div>
                 <Folder size={48} className="stat-icon" />
               </div>
             </div>
 
-            <div className="stat-card stat-card-green">
+            <div
+              className={`stat-card stat-card-green ${statusFilter === "closed" ? "active-filter-card" : ""}`}
+              onClick={() => setStatusFilter(statusFilter === "closed" ? null : "closed")}
+               >            
               <div className="stat-card-content">
                 <div>
                   <p className="stat-label">Completed</p>
-                  <p className="stat-value">{statistics.actions_completed}</p>
+                  <p className="stat-value">{homeSummary.actions_completed}</p>
                 </div>
                 <CheckCircle2 size={48} className="stat-icon" />
               </div>
             </div>
 
-            <div className="stat-card stat-card-orange">
+           <div
+                  className={`stat-card stat-card-orange ${statusFilter === "in_progress" ? "active-filter-card" : ""}`}
+                  onClick={() => setStatusFilter(statusFilter === "in_progress" ? null : "in_progress")}
+                >
               <div className="stat-card-content">
                 <div>
                   <p className="stat-label">In progress</p>
-                  <p className="stat-value">{statistics.actions_in_progress}</p>
+                  <p className="stat-value">{homeSummary.actions_in_progress}</p>
                 </div>
                 <Clock size={48} className="stat-icon" />
               </div>
             </div>
 
-            <div className="stat-card stat-card-red">
+            <div
+              className={`stat-card stat-card-red ${statusFilter === "overdue" ? "active-filter-card" : ""}`}
+              onClick={() => setStatusFilter(statusFilter === "overdue" ? null : "overdue")}
+            >
               <div className="stat-card-content">
                 <div>
                   <p className="stat-label">Overdue</p>
-                  <p className="stat-value">{statistics.actions_overdue}</p>
+                  <p className="stat-value">{homeSummary.actions_overdue}</p>
                 </div>
                 <AlertCircle size={48} className="stat-icon" />
               </div>
@@ -238,16 +267,17 @@ const handleLogout = () => {
     <h2 className="main-title">
       <Search className="main-title-icon" size={28} />
       Smart search results
-      <span className="main-title-count">({smartResults.length})</span>
+      <span className="main-title-count">({filteredSmartResults.length})</span>
     </h2>
 
     {smartSearchLoading ? (
       <p className="loading-text">Searching...</p>
-    ) : smartResults.length > 0 ? (
+    ) : filteredSmartResults.length > 0 ? (
       <div className="actions-table-wrapper">
        <table className="actions-table">
           <thead>
            <tr>
+                <th>Priority</th>
                 <th>Action</th>
                 <th>Description</th>
                 <th>Responsable</th>
@@ -258,8 +288,13 @@ const handleLogout = () => {
           </thead>
 
          <tbody>
-  {smartResults.map((action: any) => (
+  {filteredSmartResults.map((action: any) => (
     <tr key={action.id}>
+          <td>
+        <span className="priority-pill">
+          {action.priority_index ?? action.priorite ?? '—'}
+        </span>
+    </td>
       <td className="action-table-title">
         {action.titre || '—'}
       </td>
@@ -335,12 +370,13 @@ const handleLogout = () => {
     {filteredSujets.length > 0 ? (
       <div>
         {filteredSujets.map((sujet: Sujet) => (
-          <ItemCard
+         <ItemCard
             key={sujet.id}
             item={sujet}
             type="sujet"
             sujetDepth={0}
             actionDepth={0}
+            statusFilter={statusFilter}
           />
         ))}
       </div>

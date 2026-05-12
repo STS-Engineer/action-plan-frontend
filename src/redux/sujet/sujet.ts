@@ -1,6 +1,28 @@
 import axiosInstance from "../../services/axiosInstance";
-import { getStatisticsFailure, getStatisticsRequest, getStatisticsSuccess, getSujetsListFailure, getSujetsListRequest, getSujetsListSuccess, getSujetSousSujetsListFailure, getSujetSousSujetsListRequest, getSujetSousSujetsListSuccess, getSujetsRacineListFailure, getSujetsRacineListRequest, getSujetsRacineListSuccess } from "./sujet-slice";
-import { GetSujetsListRequestAction, GetSujetSousSujetsListRequestAction, GetSujetsRacineListRequestAction, Statistique } from "./sujet-types";
+import {
+    getHomeSummaryFailure,
+    getHomeSummaryRequest,
+    getHomeSummarySuccess,
+    getStatisticsFailure,
+    getStatisticsRequest,
+    getStatisticsSuccess,
+    getSujetsListFailure,
+    getSujetsListRequest,
+    getSujetsListSuccess,
+    getSujetSousSujetsListFailure,
+    getSujetSousSujetsListRequest,
+    getSujetSousSujetsListSuccess,
+    getSujetsRacineListFailure,
+    getSujetsRacineListRequest,
+    getSujetsRacineListSuccess,
+} from "./sujet-slice";
+import {
+    GetHomeSummaryRequestAction,
+    GetSujetsListRequestAction,
+    GetSujetSousSujetsListRequestAction,
+    GetSujetsRacineListRequestAction,
+    Statistique,
+} from "./sujet-types";
 
 export const getSujetsList: GetSujetsListRequestAction = async (dispatch) => {
     dispatch(getSujetsListRequest());
@@ -16,9 +38,27 @@ export const getSujetsList: GetSujetsListRequestAction = async (dispatch) => {
     };
 }
 
-export const getSujetsRacineList: GetSujetsRacineListRequestAction = async (dispatch, email) => {
+export const getSujetsRacineList: GetSujetsRacineListRequestAction = async (
+    dispatch,
+    email,
+    status = null,
+) => {
     dispatch(getSujetsRacineListRequest());
-    let url = `/api/action_plan_sujet/sujets-racine?email=${email || ''}`;
+    const params = new URLSearchParams();
+
+    if (email) {
+        params.set("email", email);
+    }
+
+    if (status) {
+        params.set("status", status);
+    }
+
+    let url = `/api/action_plan_sujet/sujets-racine`;
+
+    if (params.toString()) {
+        url = `${url}?${params.toString()}`;
+    }
 
     try {
         let response = await axiosInstance.get(url);
@@ -44,6 +84,29 @@ export const getStatistics: Statistique = async (dispatch) => {
     };
 }
 
+export const getHomeSummary: GetHomeSummaryRequestAction = async (
+    dispatch,
+    email,
+    scope,
+) => {
+    dispatch(getHomeSummaryRequest());
+
+    const params = new URLSearchParams();
+    params.set("email", email);
+    params.set("scope", scope);
+
+    const url = `/api/action_plan_sujet/home-summary?${params.toString()}`;
+
+    try {
+        const response = await axiosInstance.get(url);
+        dispatch(getHomeSummarySuccess(response.data));
+        return true;
+    } catch (error) {
+        dispatch(getHomeSummaryFailure(error));
+        return false;
+    }
+}
+
 export const getSujetSousSujets: GetSujetSousSujetsListRequestAction = async (dispatch, sujet_id) => {
     dispatch(getSujetSousSujetsListRequest());
     let url = `/api/action_plan_sujet/sujets/${sujet_id}/sous-sujets`;
@@ -57,10 +120,22 @@ export const getSujetSousSujets: GetSujetSousSujetsListRequestAction = async (di
         throw error
     };
 }
-export const getTeamSujetsRacineList = async (dispatch: any, email: string) => {
+export const getTeamSujetsRacineList = async (
+    dispatch: any,
+    email: string,
+    status: string | null = null,
+) => {
     dispatch(getSujetsRacineListRequest());
 
-    let url = `/api/action_plan_sujet/team-sujets-racine?email=${email}`;
+    const params = new URLSearchParams();
+
+    params.set("email", email);
+
+    if (status) {
+        params.set("status", status);
+    }
+
+    let url = `/api/action_plan_sujet/team-sujets-racine?${params.toString()}`;
 
     try {
         let response = await axiosInstance.get(url);

@@ -6,7 +6,14 @@ export type GetSujetsListRequestAction = (
 
 export type GetSujetsRacineListRequestAction = (
     dispatch: Dispatch<any>,
-    email: string | null
+    email: string | null,
+    status?: string | null,
+) => Promise<boolean>;
+
+export type GetHomeSummaryRequestAction = (
+    dispatch: Dispatch<any>,
+    email: string,
+    scope: "my" | "team",
 ) => Promise<boolean>;
 
 export type Statistique = (

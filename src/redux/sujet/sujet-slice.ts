@@ -5,6 +5,7 @@ const initialState = {
     sujetsList : [],
     sujetsRacineList : [],
     sujetSousSujets: [],
+    homeSummary: null,
     statistics: null,
     success: false,
     error: null
@@ -35,6 +36,18 @@ const sujetSlice = createSlice({
             state.success = true;
         },
         getSujetsRacineListFailure(state, action) {
+            state.error = action.payload;
+            state.success = false;
+        },
+        getHomeSummaryRequest(state) {
+            state.success = false;
+            state.error = null;
+        },
+        getHomeSummarySuccess(state, action) {
+            state.homeSummary = action.payload;
+            state.success = true;
+        },
+        getHomeSummaryFailure(state, action) {
             state.error = action.payload;
             state.success = false;
         },
@@ -72,6 +85,9 @@ export const {
     getSujetsRacineListRequest,
     getSujetsRacineListSuccess,
     getSujetsRacineListFailure,
+    getHomeSummaryRequest,
+    getHomeSummarySuccess,
+    getHomeSummaryFailure,
     getStatisticsRequest,
     getStatisticsSuccess,
     getStatisticsFailure,
