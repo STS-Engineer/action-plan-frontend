@@ -91,3 +91,23 @@ export const smartSearchActions = async (query: string) => {
         return [];
     }
 };
+
+export const getActionStatusComments = async (actionId: number) => {
+    const url = `/api/action_plan_action/actions/${actionId}/status-comments`;
+
+    const response = await axiosInstance.get(url);
+    return response.data;
+};
+
+export const getActionAttachments = async (actionId: number) => {
+    const url = `/api/action_plan_action/actions/${actionId}/attachments`;
+
+    const response = await axiosInstance.get(url);
+    return response.data;
+};
+
+export const getActionAttachmentDownloadUrl = (attachmentId: number) => {
+    const baseUrl = String(import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
+
+    return `${baseUrl}/api/action_plan_action/attachments/${attachmentId}/download`;
+};

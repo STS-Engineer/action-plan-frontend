@@ -8,6 +8,7 @@ import {
   FileText,
   Folder,
   FolderOpen,
+  History,
   User,
 } from 'lucide-react';
 import { useDispatch } from 'react-redux';
@@ -17,6 +18,7 @@ import { getSujetSousSujets } from '../redux/sujet/sujet';
 import { getActions, updateActionStatus } from '../redux/action/action';
 import { Link } from 'react-router';
 import { getActionHomeStatusBucket } from '../utils/actionHomeStatus';
+import { ActionHistoryModal } from './ActionHistoryModal';
 
 const SUJET_LABELS = ['Topic', 'Subtopic', 'Sub-subtopic', 'Nested subtopic'];
 const ACTION_LABELS = ['Action', 'Sub-action', 'Sub-sub-action', 'Nested action'];
@@ -40,6 +42,7 @@ export const ItemCard = (props) => {
   const [loadedItemId, setLoadedItemId] = useState(null);
   const [localStatus, setLocalStatus] = useState(item.status);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [historyAction, setHistoryAction] = useState(null);
 
   const isSujet = type === 'sujet';
   const isAction = type === 'action';
@@ -143,7 +146,17 @@ export const ItemCard = (props) => {
     setLocalStatus(item.status);
   }, [item.status]);
 
+  const openHistory = (action, event) => {
+    event.stopPropagation();
+    setHistoryAction(action);
+  };
+
+  const closeHistory = () => {
+    setHistoryAction(null);
+  };
+
   return (
+    <>
     <div className={`item-card ${menuOpen ? 'item-card-menu-open' : ''}`} style={{ marginLeft: `${depth * 20}px`, marginTop: '0.5rem' }}>
       <div className={`item-card-inner ${typeClass} ${priorityClass}`}>
         <div className="item-header" onClick={handleToggle}>
@@ -202,6 +215,14 @@ export const ItemCard = (props) => {
                         onStatusChange={onStatusChange}
                         onMenuToggle={setMenuOpen}
                       />
+                      <button
+                        type="button"
+                        className="history-button"
+                        onClick={(event) => openHistory(item, event)}
+                      >
+                        <History size={14} />
+                        History
+                      </button>
                     </div>
                     <span className="action-title">{item.titre}</span>
 
@@ -323,6 +344,7 @@ export const ItemCard = (props) => {
               <th>Due date</th>
               <th>Application</th>
               <th>Status</th>
+              <th>History</th>
 </tr>
         </thead>
 
@@ -380,6 +402,16 @@ export const ItemCard = (props) => {
       onMenuToggle={setMenuOpen}
     />
   </td>
+  <td className="history-cell">
+    <button
+      type="button"
+      className="history-button"
+      onClick={(event) => openHistory(child, event)}
+    >
+      <History size={14} />
+      History
+    </button>
+  </td>
 </tr>
           ))}
         </tbody>
@@ -397,5 +429,13 @@ export const ItemCard = (props) => {
         )}
       </div>
     </div>
+    {historyAction && (
+      <ActionHistoryModal
+        actionId={historyAction.id}
+        actionTitle={historyAction.titre}
+        onClose={closeHistory}
+      />
+    )}
+    </>
   );
 };

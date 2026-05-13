@@ -2,9 +2,10 @@ import { useDispatch, useSelector } from 'react-redux';
 import './Home.css';
 import { useEffect, useMemo, useState } from 'react';
 import { getHomeSummary, getSujetsRacineList, getTeamSujetsRacineList } from '../../redux/sujet/sujet';
-import { AlertCircle, CheckCircle2, Clock, Folder, FolderOpen, Search } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Clock, Folder, FolderOpen, History, Search } from 'lucide-react';
 import { ItemCard } from '../../components/ItemCard';
 import { StatusBadge } from '../../components/StatusBadge';
+import { ActionHistoryModal } from '../../components/ActionHistoryModal';
 import { updateActionStatus } from '../../redux/action/action';
 import { Sujet } from '../../redux/sujet/sujet-slice-types';
 import Select from 'react-select';
@@ -23,6 +24,7 @@ const Home = () => {
   const [smartSearchLoading, setSmartSearchLoading] = useState(false);
   const [viewMode, setViewMode] = useState<"my" | "team">("my");
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [historyAction, setHistoryAction] = useState<any | null>(null);
   const loggedUser = JSON.parse(localStorage.getItem("user") || "{}");
 
   const [email, setEmail] = useState<string | null>(loggedUser?.email || null);
@@ -133,6 +135,7 @@ const handleLogout = () => {
   }
 
   return (
+  <>
   <div className="app-container">
     <div className="header-top">
 
@@ -284,6 +287,7 @@ const handleLogout = () => {
                 <th>Due date</th>
                 <th>Application</th>
                 <th>Status</th>
+                <th>History</th>
               </tr>
           </thead>
 
@@ -346,6 +350,16 @@ const handleLogout = () => {
   }}
 />
       </td>
+      <td className="history-cell">
+        <button
+          type="button"
+          className="history-button"
+          onClick={() => setHistoryAction(action)}
+        >
+          <History size={14} />
+          History
+        </button>
+      </td>
     </tr>
   ))}
 </tbody>
@@ -393,6 +407,14 @@ const handleLogout = () => {
         </div>
       </div>
     </div>
+    {historyAction && (
+      <ActionHistoryModal
+        actionId={historyAction.id}
+        actionTitle={historyAction.titre}
+        onClose={() => setHistoryAction(null)}
+      />
+    )}
+  </>
   );
 };
 
