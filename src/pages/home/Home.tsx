@@ -6,6 +6,7 @@ import { AlertCircle, CheckCircle2, Clock, Folder, FolderOpen, History, Search }
 import { ItemCard } from '../../components/ItemCard';
 import { StatusBadge } from '../../components/StatusBadge';
 import { ActionHistoryModal } from '../../components/ActionHistoryModal';
+import { ActionLatestHistoryCells } from '../../components/ActionLatestHistoryCells';
 import { updateActionStatus } from '../../redux/action/action';
 import { Sujet } from '../../redux/sujet/sujet-slice-types';
 import Select from 'react-select';
@@ -287,6 +288,8 @@ const handleLogout = () => {
                 <th>Due date</th>
                 <th>Application</th>
                 <th>Status</th>
+                <th>Last comment</th>
+                <th>Fichier joint</th>
                 <th>History</th>
               </tr>
           </thead>
@@ -350,6 +353,7 @@ const handleLogout = () => {
   }}
 />
       </td>
+      <ActionLatestHistoryCells action={action} />
       <td className="history-cell">
         <button
           type="button"

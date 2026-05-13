@@ -19,6 +19,7 @@ import { getActions, updateActionStatus } from '../redux/action/action';
 import { Link } from 'react-router';
 import { getActionHomeStatusBucket } from '../utils/actionHomeStatus';
 import { ActionHistoryModal } from './ActionHistoryModal';
+import { ActionLatestHistoryCells } from './ActionLatestHistoryCells';
 
 const SUJET_LABELS = ['Topic', 'Subtopic', 'Sub-subtopic', 'Nested subtopic'];
 const ACTION_LABELS = ['Action', 'Sub-action', 'Sub-sub-action', 'Nested action'];
@@ -121,13 +122,27 @@ export const ItemCard = (props) => {
   }, [children, statusFilter]);
 
   const onStatusChange = async (actionId, newStatus, options) => {
-    const success = await updateActionStatus(dispatch, actionId, newStatus, options);
+    const result = await updateActionStatus(dispatch, actionId, newStatus, options);
 
-    if (!success) return;
+    if (!result) return;
 
     if (item.id === actionId) {
       setLocalStatus(newStatus);
     }
+
+    const latestHistoryPatch = {
+      last_status_comment: options?.comment || null,
+      last_status_comment_by: options?.created_by || null,
+      last_status_comment_at: new Date().toISOString(),
+      ...(result.attachment
+        ? {
+            last_attachment_id: result.attachment.id,
+            last_attachment_name: result.attachment.file_name,
+            last_attachment_uploaded_by: result.attachment.uploaded_by,
+            last_attachment_created_at: result.attachment.created_at,
+          }
+        : {}),
+    };
 
     setChildren((prev) =>
       prev.map((child) =>
@@ -136,6 +151,7 @@ export const ItemCard = (props) => {
               ...child,
               status: newStatus,
               closed_date: newStatus === 'closed' ? new Date().toISOString() : null,
+              ...latestHistoryPatch,
             }
           : child
       )
@@ -344,6 +360,8 @@ export const ItemCard = (props) => {
               <th>Due date</th>
               <th>Application</th>
               <th>Status</th>
+              <th>Last comment</th>
+              <th>Fichier joint</th>
               <th>History</th>
 </tr>
         </thead>
@@ -402,6 +420,7 @@ export const ItemCard = (props) => {
       onMenuToggle={setMenuOpen}
     />
   </td>
+  <ActionLatestHistoryCells action={child} />
   <td className="history-cell">
     <button
       type="button"

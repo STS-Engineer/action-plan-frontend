@@ -54,6 +54,8 @@ export const updateActionStatus = async (
       statusPayload
     );
 
+    let attachmentResponse = null;
+
     if (options?.file) {
       const formData = new FormData();
       formData.append("file", options.file);
@@ -62,7 +64,7 @@ export const updateActionStatus = async (
         formData.append("uploaded_by", options.created_by);
       }
 
-      await axiosInstance.post(
+      attachmentResponse = await axiosInstance.post(
         `/api/action_plan_action/actions/${action_id}/attachments`,
         formData,
         {
@@ -74,7 +76,10 @@ export const updateActionStatus = async (
     }
 
     dispatch(updateActionStatusSuccess(statusResponse.data));
-    return true;
+    return {
+      action: statusResponse.data,
+      attachment: attachmentResponse?.data || null,
+    };
   } catch (error) {
     dispatch(updateActionStatusFailure(error));
     return false;
