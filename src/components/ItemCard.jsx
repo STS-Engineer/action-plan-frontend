@@ -34,6 +34,7 @@ export const ItemCard = (props) => {
     sujetDepth = 0,
     actionDepth = 0,
     statusFilter = null,
+    targetActionId = null,
   } = props;
   const dispatch = useDispatch();
   const [expanded, setExpanded] = useState(false);
@@ -47,6 +48,7 @@ export const ItemCard = (props) => {
 
   const isSujet = type === 'sujet';
   const isAction = type === 'action';
+  const isTargetAction = isAction && String(item.id) === String(targetActionId);
 
   const progressPercent =
     item.total_actions > 0
@@ -173,7 +175,11 @@ export const ItemCard = (props) => {
 
   return (
     <>
-    <div className={`item-card ${menuOpen ? 'item-card-menu-open' : ''}`} style={{ marginLeft: `${depth * 20}px`, marginTop: '0.5rem' }}>
+    <div
+      className={`item-card ${menuOpen ? 'item-card-menu-open' : ''} ${isTargetAction ? 'deep-linked-action-card' : ''}`}
+      data-action-id={isAction ? item.id : undefined}
+      style={{ marginLeft: `${depth * 20}px`, marginTop: '0.5rem' }}
+    >
       <div className={`item-card-inner ${typeClass} ${priorityClass}`}>
         <div className="item-header" onClick={handleToggle}>
           <div className="item-header-content">
@@ -332,6 +338,7 @@ export const ItemCard = (props) => {
                       sujetDepth={sujetDepth + 1}
                       actionDepth={0}
                       statusFilter={statusFilter}
+                      targetActionId={targetActionId}
                       onStatusChange={onStatusChange}
                     />
                   ))}
@@ -368,7 +375,11 @@ export const ItemCard = (props) => {
 
         <tbody>
           {actionChildren.map((child) => (
-           <tr key={`${child.itemType}-${child.id}`}>
+           <tr
+            key={`${child.itemType}-${child.id}`}
+            data-action-id={child.id}
+            className={String(child.id) === String(targetActionId) ? 'deep-linked-action-row' : ''}
+           >
   <td>
     <span className="priority-pill">
       {child.priority_index ?? child.priorite ?? '—'}

@@ -2,7 +2,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import './Home.css';
 import { useEffect, useMemo, useState } from 'react';
 import { getHomeSummary, getSujetsRacineList, getTeamSujetsRacineList } from '../../redux/sujet/sujet';
-import { AlertCircle, CheckCircle2, Clock, Folder, FolderOpen, History, Search } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Clock, Folder, FolderOpen, History, Search, X } from 'lucide-react';
 import { ItemCard } from '../../components/ItemCard';
 import { StatusBadge } from '../../components/StatusBadge';
 import { ActionHistoryModal } from '../../components/ActionHistoryModal';
@@ -10,8 +10,9 @@ import { ActionLatestHistoryCells } from '../../components/ActionLatestHistoryCe
 import { updateActionStatus } from '../../redux/action/action';
 import { Sujet } from '../../redux/sujet/sujet-slice-types';
 import Select from 'react-select';
-import { getEmails, smartSearchActions } from '../../redux/action/action';
+import { getActionById, getEmails, smartSearchActions } from '../../redux/action/action';
 import { getActionHomeStatusBucket } from '../../utils/actionHomeStatus';
+import { clearTargetActionId, getStoredTargetActionId } from '../../utils/actionDeepLink';
 const Home = () => {
   const dispatch = useDispatch();
   const { homeSummary, sujetsRacineList = [] } = useSelector((state: any) => state.sujet);
@@ -26,6 +27,9 @@ const Home = () => {
   const [viewMode, setViewMode] = useState<"my" | "team">("my");
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [historyAction, setHistoryAction] = useState<any | null>(null);
+  const [deepLinkedAction, setDeepLinkedAction] = useState<any | null>(null);
+  const [deepLinkMessage, setDeepLinkMessage] = useState<string | null>(null);
+  const [targetActionId, setTargetActionId] = useState<string | null>(() => getStoredTargetActionId());
   const loggedUser = JSON.parse(localStorage.getItem("user") || "{}");
 
   const [email, setEmail] = useState<string | null>(loggedUser?.email || null);
@@ -36,6 +40,28 @@ const handleLogout = () => {
 
   window.location.href = "/login";
 };
+
+  const closeDeepLinkBanner = () => {
+    clearTargetActionId();
+    setTargetActionId(null);
+    setDeepLinkedAction(null);
+    setDeepLinkMessage(null);
+  };
+
+  const viewDeepLinkedAction = () => {
+    if (!targetActionId && !deepLinkedAction) return;
+
+    setStatusFilter(null);
+    setSearchTerm(deepLinkedAction?.titre || String(targetActionId));
+
+    window.setTimeout(() => {
+      document.querySelector(".smart-search-results")?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }, 0);
+  };
+
   const fetchData = async () => {
     try {
         const isInitial = !sujetsRacineList.length && !homeSummary;
@@ -62,6 +88,38 @@ const handleLogout = () => {
   useEffect(() => {
     fetchData();
   }, [dispatch, email, statusFilter, viewMode]);
+
+  useEffect(() => {
+    const loadDeepLinkedAction = async () => {
+      if (!targetActionId) {
+        return;
+      }
+
+      try {
+        setStatusFilter(null);
+        setSmartSearchLoading(true);
+
+        const action = await getActionById(targetActionId);
+        const actionTitle = action?.titre || `Action #${targetActionId}`;
+
+        setDeepLinkedAction(action);
+        setSearchTerm(action?.titre || String(targetActionId));
+        setDeepLinkMessage(`Opened from email: ${actionTitle}`);
+        clearTargetActionId();
+      } catch {
+        setDeepLinkedAction(null);
+        setSearchTerm(String(targetActionId));
+        setDeepLinkMessage(
+          `Action #${targetActionId} requested from email. Use search or expand related topic to view it.`
+        );
+      } finally {
+        setSmartSearchLoading(false);
+      }
+    };
+
+    loadDeepLinkedAction();
+  }, [targetActionId]);
+
   useEffect(() => {
   const runSmartSearch = async () => {
     if (!searchTerm.trim()) {
@@ -93,8 +151,22 @@ const handleLogout = () => {
     );
   }, [searchTerm, sujetsRacineList]);
 
+  const smartResultsWithDeepLink = useMemo(() => {
+    if (!deepLinkedAction) return smartResults;
+
+    const hasDeepLinkedAction = smartResults.some(
+      (action: any) => String(action.id) === String(deepLinkedAction.id)
+    );
+
+    return hasDeepLinkedAction ? smartResults : [deepLinkedAction, ...smartResults];
+  }, [deepLinkedAction, smartResults]);
+
   const filteredSmartResults = useMemo(() => {
-    return smartResults.filter((action: any) => {
+    return smartResultsWithDeepLink.filter((action: any) => {
+      if (targetActionId && String(action.id) === String(targetActionId)) {
+        return true;
+      }
+
       const bucket = getActionHomeStatusBucket(action);
 
       if (!bucket) {
@@ -107,7 +179,18 @@ const handleLogout = () => {
 
       return true;
     });
-  }, [smartResults, statusFilter]);
+  }, [smartResultsWithDeepLink, statusFilter, targetActionId]);
+
+  useEffect(() => {
+    if (!targetActionId || smartSearchLoading) return;
+
+    const timeout = window.setTimeout(() => {
+      const element = document.querySelector(`[data-action-id="${targetActionId}"]`);
+      element?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 120);
+
+    return () => window.clearTimeout(timeout);
+  }, [targetActionId, filteredSmartResults, smartSearchLoading]);
 
   if (initialLoading) {
     return (
@@ -266,6 +349,35 @@ const handleLogout = () => {
         )}
 
         <div className="main-content">
+          {deepLinkMessage && (
+            <div className="action-deep-link-banner">
+              <div>
+                <strong>{deepLinkMessage}</strong>
+                <span>
+                  {deepLinkedAction?.description || `Action #${targetActionId}`}
+                </span>
+              </div>
+              <div className="action-deep-link-actions">
+                <button
+                  type="button"
+                  className="deep-link-view-button"
+                  onClick={viewDeepLinkedAction}
+                >
+                  <Search size={14} />
+                  View in Smart Search
+                </button>
+                <button
+                  type="button"
+                  className="deep-link-close-button"
+                  aria-label="Close email action banner"
+                  onClick={closeDeepLinkBanner}
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+          )}
+
           {searchTerm.trim() && (
   <div className="smart-search-results">
     <h2 className="main-title">
@@ -296,7 +408,11 @@ const handleLogout = () => {
 
          <tbody>
   {filteredSmartResults.map((action: any) => (
-    <tr key={action.id}>
+    <tr
+      key={action.id}
+      data-action-id={action.id}
+      className={String(action.id) === String(targetActionId) ? "deep-linked-action-row" : ""}
+    >
           <td>
         <span className="priority-pill">
           {action.priority_index ?? action.priorite ?? '—'}
@@ -395,6 +511,7 @@ const handleLogout = () => {
             sujetDepth={0}
             actionDepth={0}
             statusFilter={statusFilter}
+            targetActionId={targetActionId}
           />
         ))}
       </div>

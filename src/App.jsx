@@ -4,6 +4,7 @@ import Dashboard from "./pages/dashboard/Dashboard";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 import ProtectedRoute from "./components/ProtectedRoute";
+import ActionRedirect from "./pages/action/ActionRedirect";
 
 export default function App() {
   return (
@@ -17,6 +18,15 @@ export default function App() {
           element={
             <ProtectedRoute>
               <Home />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/actions/:actionId"
+          element={
+            <ProtectedRoute>
+              <ActionRedirect />
             </ProtectedRoute>
           }
         />

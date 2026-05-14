@@ -30,6 +30,11 @@ export const getEmails: GetEmails = async (dispatch) => {
     };
 }
 
+export const getActionById = async (actionId: number | string) => {
+    const response = await axiosInstance.get(`/api/action_plan_action/actions/${actionId}`);
+    return response.data;
+};
+
 export const updateActionStatus = async (
   dispatch: any,
   action_id: number,

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router";
 import { loginUser } from "../../services/authService";
+import { clearRedirect, getStoredRedirect } from "../../utils/actionDeepLink";
 import "./Auth.css";
 
 export default function Login() {
@@ -24,7 +25,10 @@ export default function Login() {
       localStorage.setItem("token", data.access_token);
       localStorage.setItem("user", JSON.stringify(data.user));
 
-      navigate("/");
+      const redirectTarget = getStoredRedirect();
+      clearRedirect();
+
+      navigate(redirectTarget || "/");
     } catch (err: any) {
       setError(err?.response?.data?.detail || "Login failed");
     } finally {
