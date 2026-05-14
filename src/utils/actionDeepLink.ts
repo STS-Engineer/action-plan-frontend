@@ -2,7 +2,7 @@ const REDIRECT_AFTER_LOGIN_KEY = "redirectAfterLogin";
 const TARGET_ACTION_ID_KEY = "targetActionId";
 
 export const buildActionDeepLink = (actionId: number | string) => {
-  return `/actions/${encodeURIComponent(String(actionId))}`;
+  return `/?actionId=${encodeURIComponent(String(actionId))}`;
 };
 
 export const getStoredRedirect = () => {

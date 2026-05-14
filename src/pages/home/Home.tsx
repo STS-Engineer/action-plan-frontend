@@ -1,6 +1,7 @@
 import { useDispatch, useSelector } from 'react-redux';
 import './Home.css';
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router';
 import { getHomeSummary, getSujetsRacineList, getTeamSujetsRacineList } from '../../redux/sujet/sujet';
 import { AlertCircle, CheckCircle2, Clock, Folder, FolderOpen, History, Search, X } from 'lucide-react';
 import { ItemCard } from '../../components/ItemCard';
@@ -12,9 +13,10 @@ import { Sujet } from '../../redux/sujet/sujet-slice-types';
 import Select from 'react-select';
 import { getActionById, getEmails, smartSearchActions } from '../../redux/action/action';
 import { getActionHomeStatusBucket } from '../../utils/actionHomeStatus';
-import { clearTargetActionId, getStoredTargetActionId } from '../../utils/actionDeepLink';
+import { clearTargetActionId, getStoredTargetActionId, storeTargetActionId } from '../../utils/actionDeepLink';
 const Home = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const { homeSummary, sujetsRacineList = [] } = useSelector((state: any) => state.sujet);
   const { emailsList = [] } = useSelector((state: any) => state.action);
 
@@ -29,7 +31,9 @@ const Home = () => {
   const [historyAction, setHistoryAction] = useState<any | null>(null);
   const [deepLinkedAction, setDeepLinkedAction] = useState<any | null>(null);
   const [deepLinkMessage, setDeepLinkMessage] = useState<string | null>(null);
-  const [targetActionId, setTargetActionId] = useState<string | null>(() => getStoredTargetActionId());
+  const [targetActionId, setTargetActionId] = useState<string | null>(() => {
+    return new URLSearchParams(window.location.search).get("actionId") || getStoredTargetActionId();
+  });
   const loggedUser = JSON.parse(localStorage.getItem("user") || "{}");
 
   const [email, setEmail] = useState<string | null>(loggedUser?.email || null);
@@ -88,6 +92,18 @@ const handleLogout = () => {
   useEffect(() => {
     fetchData();
   }, [dispatch, email, statusFilter, viewMode]);
+
+  useEffect(() => {
+    const actionIdFromUrl = new URLSearchParams(window.location.search).get("actionId");
+
+    if (!actionIdFromUrl) {
+      return;
+    }
+
+    storeTargetActionId(actionIdFromUrl);
+    setTargetActionId(actionIdFromUrl);
+    navigate("/", { replace: true });
+  }, [navigate]);
 
   useEffect(() => {
     const loadDeepLinkedAction = async () => {
