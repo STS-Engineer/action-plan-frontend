@@ -1193,6 +1193,20 @@ body {
   color: #1e3a8a;
 }
 
+.action-deep-link-loading {
+  border-color: #cbd5e1;
+  border-left-color: #64748b;
+  background: #f8fafc;
+  color: #334155;
+}
+
+.action-deep-link-denied {
+  border-color: #fecaca;
+  border-left-color: #dc2626;
+  background: #fef2f2;
+  color: #991b1b;
+}
+
 .action-deep-link-banner strong {
   display: block;
   font-size: 14px;

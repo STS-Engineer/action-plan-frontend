@@ -35,6 +35,24 @@ export const getActionById = async (actionId: number | string) => {
     return response.data;
 };
 
+export const getActionAccess = async (actionId: number | string, email: string) => {
+    const params = new URLSearchParams();
+    params.set("email", email);
+
+    try {
+        const response = await axiosInstance.get(
+            `/api/action_plan_action/actions/${actionId}/access?${params.toString()}`
+        );
+        return response.data;
+    } catch (error: any) {
+        if (error?.response?.status === 403 && error?.response?.data) {
+            return error.response.data;
+        }
+
+        throw error;
+    }
+};
+
 export const updateActionStatus = async (
   dispatch: any,
   action_id: number,
@@ -90,8 +108,30 @@ export const updateActionStatus = async (
     return false;
   }
 };
-export const smartSearchActions = async (query: string) => {
-    const url = `/api/action_plan_action/search?query=${encodeURIComponent(query)}`;
+export const smartSearchActions = async (
+    query: string,
+    options?: {
+        email?: string | null;
+        scope?: "my" | "team";
+        scopedOnly?: boolean;
+    }
+) => {
+    const params = new URLSearchParams();
+    params.set("query", query);
+
+    if (options?.email) {
+        params.set("email", options.email);
+    }
+
+    if (options?.scope) {
+        params.set("scope", options.scope);
+    }
+
+    if (options?.scopedOnly && (!options.email || !options.scope)) {
+        return [];
+    }
+
+    const url = `/api/action_plan_action/search?${params.toString()}`;
 
     try {
         const response = await axiosInstance.get(url);

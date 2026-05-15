@@ -11,9 +11,12 @@ import { ActionLatestHistoryCells } from '../../components/ActionLatestHistoryCe
 import { updateActionStatus } from '../../redux/action/action';
 import { Sujet } from '../../redux/sujet/sujet-slice-types';
 import Select from 'react-select';
-import { getActionById, getEmails, smartSearchActions } from '../../redux/action/action';
+import { getActionAccess, getEmails, smartSearchActions } from '../../redux/action/action';
 import { getActionHomeStatusBucket } from '../../utils/actionHomeStatus';
 import { clearTargetActionId, getStoredTargetActionId, storeTargetActionId } from '../../utils/actionDeepLink';
+
+const normalizeEmail = (value?: string | null) => value?.trim().toLowerCase() || null;
+
 const Home = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -31,10 +34,14 @@ const Home = () => {
   const [historyAction, setHistoryAction] = useState<any | null>(null);
   const [deepLinkedAction, setDeepLinkedAction] = useState<any | null>(null);
   const [deepLinkMessage, setDeepLinkMessage] = useState<string | null>(null);
+  const [deepLinkAccessLoading, setDeepLinkAccessLoading] = useState(false);
+  const [accessDeniedMessage, setAccessDeniedMessage] = useState<string | null>(null);
   const [targetActionId, setTargetActionId] = useState<string | null>(() => {
     return new URLSearchParams(window.location.search).get("actionId") || getStoredTargetActionId();
   });
   const loggedUser = JSON.parse(localStorage.getItem("user") || "{}");
+  const loggedUserEmail = normalizeEmail(loggedUser?.email);
+  const hasUnresolvedDeepLink = Boolean(targetActionId) && !deepLinkMessage && !accessDeniedMessage;
 
   const [email, setEmail] = useState<string | null>(loggedUser?.email || null);
 
@@ -50,6 +57,7 @@ const handleLogout = () => {
     setTargetActionId(null);
     setDeepLinkedAction(null);
     setDeepLinkMessage(null);
+    setAccessDeniedMessage(null);
   };
 
   const viewDeepLinkedAction = () => {
@@ -68,6 +76,15 @@ const handleLogout = () => {
 
   const fetchData = async () => {
     try {
+        if (hasUnresolvedDeepLink) {
+          return;
+        }
+
+        if (!loggedUserEmail) {
+          setInitialLoading(false);
+          return;
+        }
+
         const isInitial = !sujetsRacineList.length && !homeSummary;
         if (isInitial) setInitialLoading(true);
         else setRefreshing(true);
@@ -76,9 +93,9 @@ const handleLogout = () => {
 
         await Promise.all([
         viewMode === "team"
-          ? getTeamSujetsRacineList(dispatch, loggedUser.email, statusFilter)
-          : getSujetsRacineList(dispatch, loggedUser.email, statusFilter),        
-        getHomeSummary(dispatch, loggedUser.email, scope),
+          ? getTeamSujetsRacineList(dispatch, loggedUserEmail, statusFilter)
+          : getSujetsRacineList(dispatch, loggedUserEmail, statusFilter),
+        getHomeSummary(dispatch, loggedUserEmail, scope),
         getEmails(dispatch),
         ]);
     } catch (err: any) {
@@ -91,7 +108,17 @@ const handleLogout = () => {
 
   useEffect(() => {
     fetchData();
-  }, [dispatch, email, statusFilter, viewMode]);
+  }, [
+    accessDeniedMessage,
+    deepLinkMessage,
+    dispatch,
+    email,
+    hasUnresolvedDeepLink,
+    loggedUserEmail,
+    statusFilter,
+    targetActionId,
+    viewMode,
+  ]);
 
   useEffect(() => {
     const actionIdFromUrl = new URLSearchParams(window.location.search).get("actionId");
@@ -111,30 +138,53 @@ const handleLogout = () => {
         return;
       }
 
+      if (!loggedUserEmail) {
+        setInitialLoading(false);
+        return;
+      }
+
       try {
         setStatusFilter(null);
-        setSmartSearchLoading(true);
+        setSearchTerm('');
+        setSmartResults([]);
+        setDeepLinkedAction(null);
+        setDeepLinkMessage(null);
+        setAccessDeniedMessage(null);
+        setDeepLinkAccessLoading(true);
 
-        const action = await getActionById(targetActionId);
+        const access = await getActionAccess(targetActionId, loggedUserEmail);
+
+        if (!access?.allowed) {
+          clearTargetActionId();
+          setTargetActionId(null);
+          setAccessDeniedMessage('You do not have access to this action.');
+          return;
+        }
+
+        const nextScope = access.scope === 'team' ? 'team' : 'my';
+        const action = access.action;
         const actionTitle = action?.titre || `Action #${targetActionId}`;
 
+        setViewMode(nextScope);
         setDeepLinkedAction(action);
         setSearchTerm(action?.titre || String(targetActionId));
         setDeepLinkMessage(`Opened from email: ${actionTitle}`);
         clearTargetActionId();
       } catch {
         setDeepLinkedAction(null);
-        setSearchTerm(String(targetActionId));
-        setDeepLinkMessage(
-          `Action #${targetActionId} requested from email. Use search or expand related topic to view it.`
-        );
+        setSearchTerm('');
+        setSmartResults([]);
+        setDeepLinkMessage(null);
+        setAccessDeniedMessage('You do not have access to this action.');
+        clearTargetActionId();
+        setTargetActionId(null);
       } finally {
-        setSmartSearchLoading(false);
+        setDeepLinkAccessLoading(false);
       }
     };
 
     loadDeepLinkedAction();
-  }, [targetActionId]);
+  }, [targetActionId, loggedUserEmail]);
 
   useEffect(() => {
   const runSmartSearch = async () => {
@@ -143,9 +193,18 @@ const handleLogout = () => {
       return;
     }
 
+    if (!loggedUserEmail) {
+      setSmartResults([]);
+      return;
+    }
+
     setSmartSearchLoading(true);
 
-    const results = await smartSearchActions(searchTerm);
+    const results = await smartSearchActions(searchTerm, {
+      email: loggedUserEmail,
+      scope: viewMode,
+      scopedOnly: true,
+    });
     setSmartResults(results);
 
     setSmartSearchLoading(false);
@@ -154,7 +213,7 @@ const handleLogout = () => {
   const timeout = setTimeout(runSmartSearch, 400);
 
   return () => clearTimeout(timeout);
-}, [searchTerm]);
+}, [searchTerm, loggedUserEmail, viewMode]);
 
   const filteredSujets = useMemo(() => {
     if (!searchTerm.trim()) return sujetsRacineList;
@@ -213,7 +272,9 @@ const handleLogout = () => {
         <div className="loading-container">
         <div className="loading-content">
             <div className="spinner"></div>
-            <p className="loading-text">Loading…</p>
+            <p className="loading-text">
+              {targetActionId ? 'Opening action from email...' : 'Loading...'}
+            </p>
         </div>
         </div>
     );
@@ -365,6 +426,34 @@ const handleLogout = () => {
         )}
 
         <div className="main-content">
+          {deepLinkAccessLoading && (
+            <div className="action-deep-link-banner action-deep-link-loading">
+              <div>
+                <strong>Opening action from email...</strong>
+                <span>Checking access before loading the action.</span>
+              </div>
+            </div>
+          )}
+
+          {accessDeniedMessage && (
+            <div className="action-deep-link-banner action-deep-link-denied">
+              <div>
+                <strong>{accessDeniedMessage}</strong>
+                <span>The email link was not opened because it is outside your allowed scope.</span>
+              </div>
+              <div className="action-deep-link-actions">
+                <button
+                  type="button"
+                  className="deep-link-close-button"
+                  aria-label="Close access denied banner"
+                  onClick={closeDeepLinkBanner}
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+          )}
+
           {deepLinkMessage && (
             <div className="action-deep-link-banner">
               <div>
@@ -480,7 +569,11 @@ const handleLogout = () => {
   onStatusChange={async (actionId: number, newStatus: string, options: any) => {
   await updateActionStatus(dispatch, actionId, newStatus, options);
 
-    const results = await smartSearchActions(searchTerm);
+    const results = await smartSearchActions(searchTerm, {
+      email: loggedUserEmail,
+      scope: viewMode,
+      scopedOnly: true,
+    });
     setSmartResults(results);
   }}
 />
