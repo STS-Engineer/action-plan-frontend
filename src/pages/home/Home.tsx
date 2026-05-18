@@ -3,19 +3,31 @@ import './Home.css';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { getHomeSummary, getSujetsRacineList, getTeamSujetsRacineList } from '../../redux/sujet/sujet';
-import { AlertCircle, CheckCircle2, Clock, Folder, FolderOpen, History, Search, X } from 'lucide-react';
+import { AlertCircle, Bot, CheckCircle2, Clock, Folder, FolderOpen, History, Search, X } from 'lucide-react';
 import { ItemCard } from '../../components/ItemCard';
 import { StatusBadge } from '../../components/StatusBadge';
 import { ActionHistoryModal } from '../../components/ActionHistoryModal';
 import { ActionLatestHistoryCells } from '../../components/ActionLatestHistoryCells';
-import { updateActionStatus } from '../../redux/action/action';
+import {
+  actionMatchesFlatKpiFilter,
+  FlatFilteredActionsTable,
+} from '../../components/FlatFilteredActionsTable';
+import { getFilteredActions, updateActionStatus } from '../../redux/action/action';
 import { Sujet } from '../../redux/sujet/sujet-slice-types';
 import Select from 'react-select';
 import { getActionAccess, getEmails, smartSearchActions } from '../../redux/action/action';
 import { getActionHomeStatusBucket } from '../../utils/actionHomeStatus';
 import { clearTargetActionId, getStoredTargetActionId, storeTargetActionId } from '../../utils/actionDeepLink';
+import { createAiActionPlan, generateAiActionPlanDraft } from '../../services/aiActionPlanService';
 
 const normalizeEmail = (value?: string | null) => value?.trim().toLowerCase() || null;
+type KpiFilter = "closed" | "in_progress" | "overdue";
+
+const KPI_FILTER_LABELS: Record<KpiFilter, string> = {
+  closed: "Completed",
+  in_progress: "In progress",
+  overdue: "Overdue",
+};
 
 const Home = () => {
   const dispatch = useDispatch();
@@ -30,12 +42,22 @@ const Home = () => {
   const [smartResults, setSmartResults] = useState<any[]>([]);
   const [smartSearchLoading, setSmartSearchLoading] = useState(false);
   const [viewMode, setViewMode] = useState<"my" | "team">("my");
-  const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [selectedKpiFilter, setSelectedKpiFilter] = useState<KpiFilter | null>(null);
+  const [filteredActions, setFilteredActions] = useState<any[]>([]);
+  const [filteredActionsLoading, setFilteredActionsLoading] = useState(false);
+  const [filteredActionsError, setFilteredActionsError] = useState<string | null>(null);
   const [historyAction, setHistoryAction] = useState<any | null>(null);
   const [deepLinkedAction, setDeepLinkedAction] = useState<any | null>(null);
   const [deepLinkMessage, setDeepLinkMessage] = useState<string | null>(null);
   const [deepLinkAccessLoading, setDeepLinkAccessLoading] = useState(false);
   const [accessDeniedMessage, setAccessDeniedMessage] = useState<string | null>(null);
+  const [aiModalOpen, setAiModalOpen] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [aiDraftText, setAiDraftText] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiCreating, setAiCreating] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiWarnings, setAiWarnings] = useState<string[]>([]);
   const [targetActionId, setTargetActionId] = useState<string | null>(() => {
     return new URLSearchParams(window.location.search).get("actionId") || getStoredTargetActionId();
   });
@@ -63,7 +85,7 @@ const handleLogout = () => {
   const viewDeepLinkedAction = () => {
     if (!targetActionId && !deepLinkedAction) return;
 
-    setStatusFilter(null);
+    setSelectedKpiFilter(null);
     setSearchTerm(deepLinkedAction?.titre || String(targetActionId));
 
     window.setTimeout(() => {
@@ -72,6 +94,80 @@ const handleLogout = () => {
         block: "start",
       });
     }, 0);
+  };
+
+  const openAiModal = () => {
+    setAiModalOpen(true);
+    setAiError(null);
+  };
+
+  const closeAiModal = () => {
+    if (aiLoading || aiCreating) return;
+
+    setAiModalOpen(false);
+    setAiError(null);
+  };
+
+  const generateAiDraft = async () => {
+    if (!loggedUserEmail) {
+      setAiError('You must be logged in to create an action plan.');
+      return;
+    }
+
+    if (!aiPrompt.trim()) {
+      setAiError('Describe the action plan you want to create.');
+      return;
+    }
+
+    try {
+      setAiLoading(true);
+      setAiError(null);
+      setAiWarnings([]);
+
+      const draft = await generateAiActionPlanDraft({
+        prompt: aiPrompt,
+        inserted_by: loggedUserEmail,
+        scope: viewMode,
+      });
+
+      setAiDraftText(JSON.stringify(draft, null, 2));
+      setAiWarnings(draft?.warnings || []);
+    } catch (err: any) {
+      setAiError(err?.response?.data?.detail || err?.message || 'Unable to generate draft.');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const createAiPlan = async () => {
+    if (!aiDraftText.trim()) {
+      setAiError('Generate a draft before creating the action plan.');
+      return;
+    }
+
+    try {
+      setAiCreating(true);
+      setAiError(null);
+
+      const draft = JSON.parse(aiDraftText);
+      const result = await createAiActionPlan(draft);
+
+      setAiModalOpen(false);
+      setAiPrompt('');
+      setAiDraftText('');
+      setAiWarnings([]);
+      setSelectedKpiFilter(null);
+      setSearchTerm(draft?.plan_title || result?.plan_title || '');
+      await fetchData();
+    } catch (err: any) {
+      if (err instanceof SyntaxError) {
+        setAiError('Draft JSON is invalid. Fix it before creating the action plan.');
+      } else {
+        setAiError(err?.response?.data?.detail || err?.message || 'Unable to create action plan.');
+      }
+    } finally {
+      setAiCreating(false);
+    }
   };
 
   const fetchData = async () => {
@@ -93,8 +189,8 @@ const handleLogout = () => {
 
         await Promise.all([
         viewMode === "team"
-          ? getTeamSujetsRacineList(dispatch, loggedUserEmail, statusFilter)
-          : getSujetsRacineList(dispatch, loggedUserEmail, statusFilter),
+          ? getTeamSujetsRacineList(dispatch, loggedUserEmail)
+          : getSujetsRacineList(dispatch, loggedUserEmail),
         getHomeSummary(dispatch, loggedUserEmail, scope),
         getEmails(dispatch),
         ]);
@@ -106,6 +202,55 @@ const handleLogout = () => {
     }
   };
 
+  const fetchFilteredActions = async () => {
+    if (!selectedKpiFilter || !loggedUserEmail || hasUnresolvedDeepLink) {
+      setFilteredActions([]);
+      setFilteredActionsError(null);
+      setFilteredActionsLoading(false);
+      return;
+    }
+
+    try {
+      setFilteredActionsLoading(true);
+      setFilteredActionsError(null);
+
+      const actions = await getFilteredActions({
+        email: loggedUserEmail,
+        scope: viewMode,
+        status: selectedKpiFilter,
+      });
+
+      setFilteredActions(actions || []);
+    } catch (err: any) {
+      setFilteredActions([]);
+      setFilteredActionsError(
+        err?.response?.data?.detail || err?.message || "Unable to load filtered actions."
+      );
+    } finally {
+      setFilteredActionsLoading(false);
+    }
+  };
+
+  const handleKpiClick = (filter: KpiFilter | null) => {
+    if (!filter) {
+      setSelectedKpiFilter(null);
+      return;
+    }
+
+    setSelectedKpiFilter((current) => current === filter ? null : filter);
+  };
+
+  const handleFlatStatusChange = async (actionId: number, newStatus: string, options: any) => {
+    await updateActionStatus(dispatch, actionId, newStatus, options);
+
+    await Promise.all([
+      fetchFilteredActions(),
+      loggedUserEmail
+        ? getHomeSummary(dispatch, loggedUserEmail, viewMode)
+        : Promise.resolve(false),
+    ]);
+  };
+
   useEffect(() => {
     fetchData();
   }, [
@@ -115,8 +260,16 @@ const handleLogout = () => {
     email,
     hasUnresolvedDeepLink,
     loggedUserEmail,
-    statusFilter,
     targetActionId,
+    viewMode,
+  ]);
+
+  useEffect(() => {
+    fetchFilteredActions();
+  }, [
+    hasUnresolvedDeepLink,
+    loggedUserEmail,
+    selectedKpiFilter,
     viewMode,
   ]);
 
@@ -144,7 +297,7 @@ const handleLogout = () => {
       }
 
       try {
-        setStatusFilter(null);
+        setSelectedKpiFilter(null);
         setSearchTerm('');
         setSmartResults([]);
         setDeepLinkedAction(null);
@@ -242,19 +395,23 @@ const handleLogout = () => {
         return true;
       }
 
-      const bucket = getActionHomeStatusBucket(action);
-
-      if (!bucket) {
+      if (!getActionHomeStatusBucket(action)) {
         return false;
       }
 
-      if (statusFilter && bucket !== statusFilter) {
+      if (!actionMatchesFlatKpiFilter(action, selectedKpiFilter)) {
         return false;
       }
 
       return true;
     });
-  }, [smartResultsWithDeepLink, statusFilter, targetActionId]);
+  }, [smartResultsWithDeepLink, selectedKpiFilter, targetActionId]);
+
+  const visibleFilteredActions = useMemo(() => {
+    return filteredActions.filter((action: any) =>
+      actionMatchesFlatKpiFilter(action, selectedKpiFilter)
+    );
+  }, [filteredActions, selectedKpiFilter]);
 
   useEffect(() => {
     if (!targetActionId || smartSearchLoading) return;
@@ -332,20 +489,93 @@ const handleLogout = () => {
     </div>
 
       <div className="container">
-        <div className="view-tabs">
-          <button
-            className={viewMode === "my" ? "view-tab active" : "view-tab"}
-            onClick={() => setViewMode("my")}
-          >
-            My Actions
-          </button>
+        <div className="home-toolbar">
+          <div className="view-tab-group">
+            <button
+              className={viewMode === "my" ? "view-tab active" : "view-tab"}
+              onClick={() => setViewMode("my")}
+            >
+              My Actions
+            </button>
 
-          <button
-            className={viewMode === "team" ? "view-tab active" : "view-tab"}
-            onClick={() => setViewMode("team")}
-          >
-            Team Actions
-          </button>
+            <button
+              className={viewMode === "team" ? "view-tab active" : "view-tab"}
+              onClick={() => setViewMode("team")}
+            >
+              Team Actions
+            </button>
+          </div>
+
+          <div className="home-toolbar-right">
+            {homeSummary && (
+              <div className="toolbar-kpis" aria-label="Action filters">
+                <button
+                  type="button"
+                  className={`stat-card stat-card-blue ${!selectedKpiFilter ? "active-filter-card" : ""}`}
+                  onClick={() => handleKpiClick(null)}
+                >
+                  <div className="stat-card-content">
+                    <div>
+                      <p className="stat-label">Total</p>
+                      <p className="stat-value">{homeSummary.total_sujets}</p>
+                    </div>
+                    <Folder size={18} className="stat-icon" />
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  className={`stat-card stat-card-green ${selectedKpiFilter === "closed" ? "active-filter-card" : ""}`}
+                  onClick={() => handleKpiClick("closed")}
+                >
+                  <div className="stat-card-content">
+                    <div>
+                      <p className="stat-label">Completed</p>
+                      <p className="stat-value">{homeSummary.actions_completed}</p>
+                    </div>
+                    <CheckCircle2 size={18} className="stat-icon" />
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  className={`stat-card stat-card-orange ${selectedKpiFilter === "in_progress" ? "active-filter-card" : ""}`}
+                  onClick={() => handleKpiClick("in_progress")}
+                >
+                  <div className="stat-card-content">
+                    <div>
+                      <p className="stat-label">In progress</p>
+                      <p className="stat-value">{homeSummary.actions_in_progress}</p>
+                    </div>
+                    <Clock size={18} className="stat-icon" />
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  className={`stat-card stat-card-red ${selectedKpiFilter === "overdue" ? "active-filter-card" : ""}`}
+                  onClick={() => handleKpiClick("overdue")}
+                >
+                  <div className="stat-card-content">
+                    <div>
+                      <p className="stat-label">Overdue</p>
+                      <p className="stat-value">{homeSummary.actions_overdue}</p>
+                    </div>
+                    <AlertCircle size={18} className="stat-icon" />
+                  </div>
+                </button>
+              </div>
+            )}
+
+            <button
+              type="button"
+              className="ai-create-button"
+              onClick={openAiModal}
+            >
+              <Bot size={16} />
+              Create with AI
+            </button>
+          </div>
         </div>
 
         <div className="search-section">
@@ -371,59 +601,6 @@ const handleLogout = () => {
                 />
             </div>
         </div>
-
-        {homeSummary && (
-          <div className="stats-grid">
-            <div className="stat-card stat-card-blue">
-              <div className="stat-card-content">
-                <div>
-                  <p className="stat-label">Total topics</p>
-                  <p className="stat-value">{homeSummary.total_sujets}</p>
-                </div>
-                <Folder size={48} className="stat-icon" />
-              </div>
-            </div>
-
-            <div
-              className={`stat-card stat-card-green ${statusFilter === "closed" ? "active-filter-card" : ""}`}
-              onClick={() => setStatusFilter(statusFilter === "closed" ? null : "closed")}
-               >            
-              <div className="stat-card-content">
-                <div>
-                  <p className="stat-label">Completed</p>
-                  <p className="stat-value">{homeSummary.actions_completed}</p>
-                </div>
-                <CheckCircle2 size={48} className="stat-icon" />
-              </div>
-            </div>
-
-           <div
-                  className={`stat-card stat-card-orange ${statusFilter === "in_progress" ? "active-filter-card" : ""}`}
-                  onClick={() => setStatusFilter(statusFilter === "in_progress" ? null : "in_progress")}
-                >
-              <div className="stat-card-content">
-                <div>
-                  <p className="stat-label">In progress</p>
-                  <p className="stat-value">{homeSummary.actions_in_progress}</p>
-                </div>
-                <Clock size={48} className="stat-icon" />
-              </div>
-            </div>
-
-            <div
-              className={`stat-card stat-card-red ${statusFilter === "overdue" ? "active-filter-card" : ""}`}
-              onClick={() => setStatusFilter(statusFilter === "overdue" ? null : "overdue")}
-            >
-              <div className="stat-card-content">
-                <div>
-                  <p className="stat-label">Overdue</p>
-                  <p className="stat-value">{homeSummary.actions_overdue}</p>
-                </div>
-                <AlertCircle size={48} className="stat-icon" />
-              </div>
-            </div>
-          </div>
-        )}
 
         <div className="main-content">
           {deepLinkAccessLoading && (
@@ -602,7 +779,25 @@ const handleLogout = () => {
     )}
   </div>
 )}
-         {!searchTerm.trim() && (
+         {!searchTerm.trim() && selectedKpiFilter && (
+  <>
+    <h2 className="main-title">
+      <FolderOpen className="main-title-icon" size={32} />
+      {KPI_FILTER_LABELS[selectedKpiFilter]} actions
+      <span className="main-title-count">({visibleFilteredActions.length})</span>
+    </h2>
+
+    <FlatFilteredActionsTable
+      actions={filteredActions}
+      loading={filteredActionsLoading}
+      error={filteredActionsError}
+      filter={selectedKpiFilter}
+      onOpenHistory={setHistoryAction}
+      onStatusChange={handleFlatStatusChange}
+    />
+  </>
+)}
+         {!searchTerm.trim() && !selectedKpiFilter && (
   <>
     <h2 className="main-title">
       <FolderOpen className="main-title-icon" size={32} />
@@ -619,7 +814,7 @@ const handleLogout = () => {
             type="sujet"
             sujetDepth={0}
             actionDepth={0}
-            statusFilter={statusFilter}
+            statusFilter={null}
             targetActionId={targetActionId}
           />
         ))}
@@ -637,6 +832,101 @@ const handleLogout = () => {
         </div>
       </div>
     </div>
+    {aiModalOpen && (
+      <div className="ai-modal-overlay" onClick={closeAiModal}>
+        <section
+          className="ai-modal"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="ai-modal-title"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <header className="ai-modal-header">
+            <div>
+              <h3 id="ai-modal-title">Create action plan with AI</h3>
+              <p>Generate a draft, edit it, then validate before saving.</p>
+            </div>
+
+            <button
+              type="button"
+              className="ai-modal-close"
+              onClick={closeAiModal}
+              disabled={aiLoading || aiCreating}
+              aria-label="Close AI assistant"
+            >
+              <X size={18} />
+            </button>
+          </header>
+
+          <label className="ai-modal-label">Prompt</label>
+          <textarea
+            className="ai-prompt-input"
+            placeholder="Create an action plan to reduce overdue supplier deliveries"
+            value={aiPrompt}
+            onChange={(event) => setAiPrompt(event.target.value)}
+            rows={4}
+          />
+
+          <div className="ai-modal-actions">
+            <button
+              type="button"
+              className="cancel-button"
+              onClick={closeAiModal}
+              disabled={aiLoading || aiCreating}
+            >
+              Cancel
+            </button>
+
+            <button
+              type="button"
+              className="ai-generate-button"
+              onClick={generateAiDraft}
+              disabled={aiLoading || aiCreating}
+            >
+              {aiLoading ? 'Generating...' : 'Generate draft'}
+            </button>
+          </div>
+
+          {aiError && (
+            <div className="status-modal-error">
+              {aiError}
+            </div>
+          )}
+
+          {aiWarnings.length > 0 && (
+            <div className="ai-warning-box">
+              {aiWarnings.map((warning) => (
+                <div key={warning}>{warning}</div>
+              ))}
+            </div>
+          )}
+
+          {aiDraftText && (
+            <>
+              <label className="ai-modal-label">Editable draft JSON</label>
+              <textarea
+                className="ai-draft-preview"
+                value={aiDraftText}
+                onChange={(event) => setAiDraftText(event.target.value)}
+                rows={16}
+                spellCheck={false}
+              />
+
+              <div className="ai-modal-actions">
+                <button
+                  type="button"
+                  className="save-button"
+                  onClick={createAiPlan}
+                  disabled={aiCreating || aiLoading}
+                >
+                  {aiCreating ? 'Creating...' : 'Create action plan'}
+                </button>
+              </div>
+            </>
+          )}
+        </section>
+      </div>
+    )}
     {historyAction && (
       <ActionHistoryModal
         actionId={historyAction.id}

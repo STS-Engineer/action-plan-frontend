@@ -1,7 +1,7 @@
 import { AlertCircle, Download, FileText, History, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
-  getActionAttachmentDownloadUrl,
+  downloadActionAttachment,
   getActionAttachments,
   getActionStatusComments,
 } from "../redux/action/action";
@@ -33,6 +33,7 @@ export const ActionHistoryModal = ({ actionId, actionTitle, onClose }) => {
   const [attachments, setAttachments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [downloadError, setDownloadError] = useState(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -40,6 +41,7 @@ export const ActionHistoryModal = ({ actionId, actionTitle, onClose }) => {
     const fetchHistory = async () => {
       setLoading(true);
       setError(null);
+      setDownloadError(null);
 
       try {
         const [statusComments, actionAttachments] = await Promise.all([
@@ -80,6 +82,19 @@ export const ActionHistoryModal = ({ actionId, actionTitle, onClose }) => {
 
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
+
+  const handleDownload = async (attachment) => {
+    try {
+      setDownloadError(null);
+      await downloadActionAttachment(attachment.id, attachment.file_name);
+    } catch (err) {
+      setDownloadError(
+        err?.message ||
+          err?.response?.data?.detail ||
+          "Attachment file not found or legacy file is unavailable."
+      );
+    }
+  };
 
   return (
     <div className="history-modal-overlay" onClick={onClose}>
@@ -127,6 +142,13 @@ export const ActionHistoryModal = ({ actionId, actionTitle, onClose }) => {
 
         {!loading && !error && (
           <div className="history-modal-body">
+            {downloadError && (
+              <div className="history-modal-error">
+                <AlertCircle size={20} />
+                <span>{downloadError}</span>
+              </div>
+            )}
+
             <section className="history-section">
               <div className="history-section-heading">
                 <History size={18} />
@@ -188,15 +210,14 @@ export const ActionHistoryModal = ({ actionId, actionTitle, onClose }) => {
                         </span>
                       </div>
 
-                      <a
+                      <button
+                        type="button"
                         className="history-download-link"
-                        href={getActionAttachmentDownloadUrl(attachment.id)}
-                        target="_blank"
-                        rel="noreferrer"
+                        onClick={() => handleDownload(attachment)}
                       >
                         <Download size={16} />
                         Download
-                      </a>
+                      </button>
                     </article>
                   ))}
                 </div>

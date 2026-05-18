@@ -3,8 +3,6 @@ import {
   AlertCircle,
   ArrowLeft,
   BarChart3,
-  CheckCircle2,
-  Clock,
   Flame,
   RefreshCw,
   ShieldAlert,
@@ -51,18 +49,6 @@ const scopeLabels: Record<string, string> = {
 
 const formatNumber = (value: any) => Number(value || 0).toLocaleString("en-GB");
 
-const formatDate = (value?: string | null) => {
-  if (!value) return "-";
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-
-  return date.toLocaleDateString("en-GB");
-};
-
 export default function Dashboard() {
   const loggedUser = useMemo(() => {
     try {
@@ -102,7 +88,6 @@ export default function Dashboard() {
   }, [scope]);
 
   const supportedScopes = data?.supported_scopes || ["my", "team", "global"];
-  const kpis = data?.global || {};
 
   if (loading && !data) {
     return (
@@ -175,15 +160,6 @@ export default function Dashboard() {
         {error && <span className="dashboard-inline-error">{error}</span>}
       </section>
 
-      <section className="dashboard-kpis">
-        <KpiCard title="Total visible actions" value={kpis.total_actions} icon={BarChart3} tone="blue" />
-        <KpiCard title="In progress" value={kpis.in_progress} icon={Clock} tone="teal" />
-        <KpiCard title="Overdue" value={kpis.overdue} icon={AlertCircle} tone="red" />
-        <KpiCard title="Completed" value={kpis.completed} icon={CheckCircle2} tone="green" />
-        <KpiCard title="High priority" value={kpis.high_priority} icon={ShieldAlert} tone="amber" />
-        <KpiCard title="Escalation ready" value={kpis.escalation_ready} icon={Flame} tone="violet" />
-      </section>
-
       <section className="dashboard-chart-grid">
         <ChartPanel title="Pareto - People with late actions" icon={Users} large>
           <ParetoChart data={data?.people_late_pareto || []} barKey="overdue" barName="Late actions" />
@@ -209,52 +185,7 @@ export default function Dashboard() {
           <SimpleBarChart data={data?.site_overdue || []} dataKey="overdue" />
         </ChartPanel>
       </section>
-
-      <section className="dashboard-critical-section">
-        <div className="dashboard-section-title">
-          <Flame size={20} />
-          <h2>Top critical actions</h2>
-        </div>
-
-        <div className="critical-actions-grid">
-          {(data?.top_critical_actions || []).length > 0 ? (
-            data.top_critical_actions.map((action: any) => (
-              <article className="critical-action-card" key={action.id}>
-                <div className="critical-action-top">
-                  <span className="priority-chip">{action.priority_index ?? "-"}</span>
-                  <span className={`status-chip ${action.status_bucket || "in_progress"}`}>
-                    {action.status_bucket === "overdue" ? "Overdue" : action.status || "Open"}
-                  </span>
-                </div>
-
-                <h3>{action.titre || "-"}</h3>
-
-                <div className="critical-action-meta">
-                  <span>{action.responsable || "-"}</span>
-                  <span>{formatDate(action.due_date)}</span>
-                  <span>{action.department || "Unknown department"}</span>
-                  <span>{action.site || "Unknown site"}</span>
-                </div>
-              </article>
-            ))
-          ) : (
-            <div className="dashboard-empty">No critical actions in this scope.</div>
-          )}
-        </div>
-      </section>
     </div>
-  );
-}
-
-function KpiCard({ title, value, icon: Icon, tone }: any) {
-  return (
-    <article className={`kpi-card ${tone}`}>
-      <div>
-        <span>{title}</span>
-        <strong>{formatNumber(value)}</strong>
-      </div>
-      <Icon size={30} />
-    </article>
   );
 }
 
@@ -262,7 +193,7 @@ function ChartPanel({ title, icon: Icon, large = false, children }: any) {
   return (
     <article className={`dashboard-chart-panel ${large ? "large" : ""}`}>
       <div className="chart-panel-title">
-        <Icon size={18} />
+        <Icon size={16} />
         <h2>{title}</h2>
       </div>
       <div className="chart-frame">{children}</div>
@@ -295,13 +226,13 @@ function ParetoChart({ data, barKey, barName }: any) {
 
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <ComposedChart data={data} margin={{ top: 12, right: 10, left: -14, bottom: 20 }}>
+      <ComposedChart data={data} margin={{ top: 6, right: 8, left: -18, bottom: 8 }}>
         <CartesianGrid strokeDasharray="3 3" vertical={false} />
-        <XAxis dataKey="name" tick={{ fontSize: 11 }} interval={0} angle={-22} textAnchor="end" height={58} />
-        <YAxis yAxisId="left" tick={{ fontSize: 11 }} allowDecimals={false} />
-        <YAxis yAxisId="right" orientation="right" domain={[0, 100]} tick={{ fontSize: 11 }} />
+        <XAxis dataKey="name" tick={{ fontSize: 10 }} interval={0} angle={-18} textAnchor="end" height={46} />
+        <YAxis yAxisId="left" tick={{ fontSize: 10 }} allowDecimals={false} />
+        <YAxis yAxisId="right" orientation="right" domain={[0, 100]} tick={{ fontSize: 10 }} />
         <Tooltip content={<ChartTooltip />} />
-        <Legend />
+        <Legend wrapperStyle={{ fontSize: 11 }} />
         <Bar yAxisId="left" dataKey={barKey} name={barName} fill={COLORS.blue} radius={[6, 6, 0, 0]} />
         <Line
           yAxisId="right"
@@ -329,8 +260,8 @@ function StatusDistributionChart({ data }: any) {
           data={visibleData}
           dataKey="value"
           nameKey="name"
-          innerRadius={62}
-          outerRadius={96}
+          innerRadius={46}
+          outerRadius={74}
           paddingAngle={2}
           label={({ name, value }) => `${name}: ${value}`}
         >
@@ -339,7 +270,7 @@ function StatusDistributionChart({ data }: any) {
           ))}
         </Pie>
         <Tooltip content={<ChartTooltip />} />
-        <Legend />
+        <Legend wrapperStyle={{ fontSize: 11 }} />
       </PieChart>
     </ResponsiveContainer>
   );
@@ -350,10 +281,10 @@ function PriorityChart({ data }: any) {
 
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <BarChart data={data} margin={{ top: 12, right: 12, left: -14, bottom: 10 }}>
+      <BarChart data={data} margin={{ top: 6, right: 8, left: -18, bottom: 4 }}>
         <CartesianGrid strokeDasharray="3 3" vertical={false} />
-        <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-        <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+        <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+        <YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
         <Tooltip content={<ChartTooltip />} />
         <Bar dataKey="count" name="Actions" radius={[6, 6, 0, 0]}>
           {data.map((entry: any, index: number) => (
@@ -370,10 +301,10 @@ function SimpleBarChart({ data, dataKey }: any) {
 
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <BarChart data={data} layout="vertical" margin={{ top: 12, right: 16, left: 58, bottom: 8 }}>
+      <BarChart data={data} layout="vertical" margin={{ top: 6, right: 8, left: 34, bottom: 4 }}>
         <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-        <XAxis type="number" tick={{ fontSize: 11 }} allowDecimals={false} />
-        <YAxis type="category" dataKey="name" width={112} tick={{ fontSize: 11 }} />
+        <XAxis type="number" tick={{ fontSize: 10 }} allowDecimals={false} />
+        <YAxis type="category" dataKey="name" width={88} tick={{ fontSize: 10 }} />
         <Tooltip content={<ChartTooltip />} />
         <Bar dataKey={dataKey} name="Late actions" fill={COLORS.orange} radius={[0, 6, 6, 0]} />
       </BarChart>

@@ -105,7 +105,12 @@ export const updateActionStatus = async (
     };
   } catch (error) {
     dispatch(updateActionStatusFailure(error));
-    return false;
+    const message =
+      (error as any)?.response?.data?.detail ||
+      (error as any)?.message ||
+      "Failed to update action status.";
+
+    throw new Error(message);
   }
 };
 export const smartSearchActions = async (
@@ -142,6 +147,27 @@ export const smartSearchActions = async (
     }
 };
 
+export const getFilteredActions = async (options: {
+    email?: string | null;
+    scope: "my" | "team";
+    status: "overdue" | "closed" | "in_progress" | "all";
+}) => {
+    if (!options.email) {
+        return [];
+    }
+
+    const params = new URLSearchParams();
+    params.set("email", options.email);
+    params.set("scope", options.scope);
+    params.set("status", options.status);
+
+    const response = await axiosInstance.get(
+        `/api/action_plan_action/filtered-actions?${params.toString()}`
+    );
+
+    return response.data;
+};
+
 export const getActionStatusComments = async (actionId: number) => {
     const url = `/api/action_plan_action/actions/${actionId}/status-comments`;
 
@@ -160,4 +186,108 @@ export const getActionAttachmentDownloadUrl = (attachmentId: number) => {
     const baseUrl = String(import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
 
     return `${baseUrl}/api/action_plan_action/attachments/${attachmentId}/download`;
+};
+
+const getDownloadFilename = (contentDisposition?: string, fallbackFileName?: string) => {
+    if (!contentDisposition) {
+        return fallbackFileName || "attachment";
+    }
+
+    const utf8Match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
+
+    if (utf8Match?.[1]) {
+        return decodeURIComponent(utf8Match[1]);
+    }
+
+    const filenameMatch = contentDisposition.match(/filename="?([^";]+)"?/i);
+
+    return filenameMatch?.[1] || fallbackFileName || "attachment";
+};
+
+const isJsonContentType = (contentType?: string) => (
+    String(contentType || "").toLowerCase().includes("application/json")
+);
+
+const readJsonBlob = async (blob: Blob) => {
+    try {
+        const text = await blob.text();
+
+        return text ? JSON.parse(text) : null;
+    } catch {
+        return null;
+    }
+};
+
+const openDownloadUrl = (downloadUrl: string, fileName: string) => {
+    const link = document.createElement("a");
+
+    link.href = downloadUrl;
+    link.download = fileName;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+};
+
+const normalizeAttachmentDownloadError = async (error: any) => {
+    const status = error?.response?.status;
+    const responseData = error?.response?.data;
+    let detail = error?.response?.data?.detail;
+
+    if (responseData instanceof Blob && isJsonContentType(responseData.type)) {
+        const payload = await readJsonBlob(responseData);
+        detail = payload?.detail || detail;
+    }
+
+    if (status === 404) {
+        return new Error("Attachment file not found or legacy file is unavailable.");
+    }
+
+    return new Error(detail || error?.message || "Unable to download attachment.");
+};
+
+export const downloadActionAttachment = async (
+    attachmentId: number,
+    fallbackFileName?: string
+) => {
+    try {
+        const response = await axiosInstance.get(
+            `/api/action_plan_action/attachments/${attachmentId}/download`,
+            { responseType: "blob" }
+        );
+        const contentType = response.headers["content-type"] || "application/octet-stream";
+        const fileName = getDownloadFilename(
+            response.headers["content-disposition"],
+            fallbackFileName
+        );
+
+        if (isJsonContentType(contentType) && response.data instanceof Blob) {
+            const payload = await readJsonBlob(response.data);
+            const downloadUrl = payload?.download_url;
+            const azureFileName = payload?.file_name || fileName;
+
+            if (!downloadUrl) {
+                throw new Error("Unable to download attachment.");
+            }
+
+            openDownloadUrl(downloadUrl, azureFileName);
+            return;
+        }
+
+        const blob = response.data instanceof Blob
+            ? response.data
+            : new Blob([response.data], { type: contentType });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement("a");
+
+        link.href = url;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+    } catch (error: any) {
+        throw await normalizeAttachmentDownloadError(error);
+    }
 };

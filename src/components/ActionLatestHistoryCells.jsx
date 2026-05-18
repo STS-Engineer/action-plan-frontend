@@ -1,5 +1,5 @@
 import { FileText } from "lucide-react";
-import { getActionAttachmentDownloadUrl } from "../redux/action/action";
+import { downloadActionAttachment } from "../redux/action/action";
 import "./ActionHistoryModal.css";
 
 const MAX_COMMENT_LENGTH = 80;
@@ -44,6 +44,20 @@ export const ActionLatestHistoryCells = ({ action }) => {
   const attachmentName = action?.last_attachment_name;
   const hasAttachment = Boolean(attachmentId && attachmentName);
 
+  const handleDownloadAttachment = async (event) => {
+    event.stopPropagation();
+
+    try {
+      await downloadActionAttachment(attachmentId, attachmentName);
+    } catch (error) {
+      window.alert(
+        error?.message ||
+          error?.response?.data?.detail ||
+          "Attachment file not found or legacy file is unavailable."
+      );
+    }
+  };
+
   return (
     <>
       <td className="last-comment-cell">
@@ -66,17 +80,15 @@ export const ActionLatestHistoryCells = ({ action }) => {
 
       <td className="attachment-cell">
         {hasAttachment ? (
-          <a
+          <button
+            type="button"
             className="attachment-link"
-            href={getActionAttachmentDownloadUrl(attachmentId)}
-            target="_blank"
-            rel="noreferrer"
             title={attachmentName}
-            onClick={(event) => event.stopPropagation()}
+            onClick={handleDownloadAttachment}
           >
             <FileText size={14} />
             <span>{shorten(attachmentName, MAX_FILE_NAME_LENGTH)}</span>
-          </a>
+          </button>
         ) : (
           <span className="empty-table-value">&mdash;</span>
         )}
