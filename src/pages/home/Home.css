@@ -1731,6 +1731,13 @@ body.status-modal-open .status-modal-overlay {
   color: #991b1b;
 }
 
+.ai-created-plan-banner {
+  border-color: #bbf7d0;
+  border-left-color: #059669;
+  background: #ecfdf5;
+  color: #065f46;
+}
+
 .action-deep-link-banner strong {
   display: block;
   font-size: 14px;

@@ -23,6 +23,11 @@ import { clearAuthTokens } from '../../services/axiosInstance';
 
 const normalizeEmail = (value?: string | null) => value?.trim().toLowerCase() || null;
 type KpiFilter = "closed" | "in_progress" | "overdue";
+type AiCreatedPlanFocus = {
+  rootSujetId: number | string | null;
+  sujetIds: Array<number | string>;
+  actionId: number | string | null;
+} | null;
 
 const KPI_FILTER_LABELS: Record<KpiFilter, string> = {
   closed: "Completed",
@@ -53,6 +58,8 @@ const Home = () => {
   const [deepLinkAccessLoading, setDeepLinkAccessLoading] = useState(false);
   const [accessDeniedMessage, setAccessDeniedMessage] = useState<string | null>(null);
   const [aiModalOpen, setAiModalOpen] = useState(false);
+  const [aiCreatedMessage, setAiCreatedMessage] = useState<string | null>(null);
+  const [aiCreatedPlanFocus, setAiCreatedPlanFocus] = useState<AiCreatedPlanFocus>(null);
   const [targetActionId, setTargetActionId] = useState<string | null>(() => {
     return new URLSearchParams(window.location.search).get("actionId") || getStoredTargetActionId();
   });
@@ -169,8 +176,28 @@ const handleLogout = () => {
   };
 
   const handleAiPlanCreated = async (result: any, draft: any) => {
+    const rootSujetId = result?.root_sujet_id || result?.root_sujet_ids?.[0] || null;
+    const createdSujetIds = [
+      ...new Set([
+        ...(result?.root_sujet_ids || []),
+        ...(result?.created_sujet_ids || []),
+      ]),
+    ];
+    const firstActionId = result?.created_action_ids?.[0] || null;
+
     setSelectedKpiFilter(null);
-    setSearchTerm(draft?.plan_title || result?.plan_title || '');
+    setSearchTerm('');
+    setSmartResults([]);
+    setDeepLinkedAction(null);
+    setDeepLinkMessage(null);
+    setAccessDeniedMessage(null);
+    setAiCreatedMessage('AI action plan created successfully.');
+    setAiCreatedPlanFocus({
+      rootSujetId,
+      sujetIds: createdSujetIds,
+      actionId: firstActionId,
+    });
+
     await fetchData();
   };
 
@@ -358,6 +385,26 @@ const handleLogout = () => {
     return () => window.clearTimeout(timeout);
   }, [targetActionId, filteredSmartResults, smartSearchLoading]);
 
+  useEffect(() => {
+    if (!aiCreatedPlanFocus?.rootSujetId && !aiCreatedPlanFocus?.actionId) return;
+
+    const timeout = window.setTimeout(() => {
+      const actionElement = aiCreatedPlanFocus.actionId
+        ? document.querySelector(`[data-action-id="${aiCreatedPlanFocus.actionId}"]`)
+        : null;
+      const sujetElement = aiCreatedPlanFocus.rootSujetId
+        ? document.querySelector(`[data-sujet-id="${aiCreatedPlanFocus.rootSujetId}"]`)
+        : null;
+
+      (actionElement || sujetElement)?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }, 700);
+
+    return () => window.clearTimeout(timeout);
+  }, [aiCreatedPlanFocus, sujetsRacineList]);
+
   if (initialLoading) {
     return (
         <div className="loading-container">
@@ -537,6 +584,25 @@ const handleLogout = () => {
         </div>
 
         <div className="main-content">
+          {aiCreatedMessage && (
+            <div className="action-deep-link-banner ai-created-plan-banner">
+              <div>
+                <strong>{aiCreatedMessage}</strong>
+                <span>The new action plan has been added to your Home tree.</span>
+              </div>
+              <div className="action-deep-link-actions">
+                <button
+                  type="button"
+                  className="deep-link-close-button"
+                  aria-label="Close AI created plan banner"
+                  onClick={() => setAiCreatedMessage(null)}
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+          )}
+
           {deepLinkAccessLoading && (
             <div className="action-deep-link-banner action-deep-link-loading">
               <div>
@@ -750,6 +816,8 @@ const handleLogout = () => {
             actionDepth={0}
             statusFilter={null}
             targetActionId={targetActionId}
+            highlightActionId={aiCreatedPlanFocus?.actionId}
+            forceExpandedSujetIds={aiCreatedPlanFocus?.sujetIds || []}
           />
         ))}
       </div>

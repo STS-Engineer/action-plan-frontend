@@ -35,6 +35,8 @@ export const ItemCard = (props) => {
     actionDepth = 0,
     statusFilter = null,
     targetActionId = null,
+    highlightActionId = null,
+    forceExpandedSujetIds = [],
   } = props;
   const dispatch = useDispatch();
   const [expanded, setExpanded] = useState(false);
@@ -48,7 +50,11 @@ export const ItemCard = (props) => {
 
   const isSujet = type === 'sujet';
   const isAction = type === 'action';
-  const isTargetAction = isAction && String(item.id) === String(targetActionId);
+  const effectiveTargetActionId = highlightActionId || targetActionId;
+  const isTargetAction = isAction && String(item.id) === String(effectiveTargetActionId);
+  const isForcedExpandedSujet = isSujet && forceExpandedSujetIds.some(
+    (sujetId) => String(sujetId) === String(item.id)
+  );
 
   const progressPercent =
     item.total_actions > 0
@@ -164,6 +170,17 @@ export const ItemCard = (props) => {
     setLocalStatus(item.status);
   }, [item.status]);
 
+  useEffect(() => {
+    if (!isForcedExpandedSujet || expanded || loading) return;
+
+    const expandCreatedSujet = async () => {
+      await fetchChildren();
+      setExpanded(true);
+    };
+
+    expandCreatedSujet();
+  }, [isForcedExpandedSujet, expanded, loading, item.id]);
+
   const openHistory = (action, event) => {
     event.stopPropagation();
     setHistoryAction(action);
@@ -177,6 +194,7 @@ export const ItemCard = (props) => {
     <>
     <div
       className={`item-card ${menuOpen ? 'item-card-menu-open' : ''} ${isTargetAction ? 'deep-linked-action-card' : ''}`}
+      data-sujet-id={isSujet ? item.id : undefined}
       data-action-id={isAction ? item.id : undefined}
       style={{ marginLeft: `${depth * 20}px`, marginTop: '0.5rem' }}
     >
@@ -339,6 +357,8 @@ export const ItemCard = (props) => {
                       actionDepth={0}
                       statusFilter={statusFilter}
                       targetActionId={targetActionId}
+                      highlightActionId={highlightActionId}
+                      forceExpandedSujetIds={forceExpandedSujetIds}
                       onStatusChange={onStatusChange}
                     />
                   ))}
@@ -378,7 +398,7 @@ export const ItemCard = (props) => {
            <tr
             key={`${child.itemType}-${child.id}`}
             data-action-id={child.id}
-            className={String(child.id) === String(targetActionId) ? 'deep-linked-action-row' : ''}
+            className={String(child.id) === String(effectiveTargetActionId) ? 'deep-linked-action-row' : ''}
            >
   <td>
     <span className="priority-pill">
