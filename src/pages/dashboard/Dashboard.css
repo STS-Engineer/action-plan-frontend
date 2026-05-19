@@ -183,6 +183,16 @@
   min-width: 0;
 }
 
+.chart-frame .recharts-sector,
+.chart-frame .recharts-bar-rectangle {
+  outline: none;
+}
+
+.chart-frame .recharts-sector:hover,
+.chart-frame .recharts-bar-rectangle:hover {
+  filter: brightness(0.92);
+}
+
 .dashboard-chart-panel.large .chart-frame {
   height: 214px;
 }
@@ -256,6 +266,196 @@
   cursor: pointer;
 }
 
+.drilldown-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  background: rgba(15, 23, 42, 0.48);
+}
+
+.drilldown-modal {
+  width: min(1180px, 100%);
+  max-height: min(760px, calc(100vh - 36px));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 8px;
+  background: var(--dash-surface);
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.28);
+}
+
+.drilldown-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--dash-border);
+}
+
+.drilldown-modal-header h3 {
+  margin: 0;
+  color: var(--dash-text);
+  font-size: 18px;
+  line-height: 1.2;
+  font-weight: 900;
+  letter-spacing: 0;
+}
+
+.drilldown-modal-header span {
+  display: inline-block;
+  margin-top: 4px;
+  color: var(--dash-muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.drilldown-close-button {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid var(--dash-border);
+  border-radius: 8px;
+  background: #ffffff;
+  color: #334155;
+  cursor: pointer;
+}
+
+.drilldown-state,
+.drilldown-error {
+  margin: 14px;
+  display: grid;
+  place-items: center;
+  min-height: 180px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  color: var(--dash-muted);
+  font-size: 13px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.drilldown-error {
+  border-color: #fecaca;
+  color: var(--dash-red);
+  background: #fef2f2;
+}
+
+.drilldown-table-wrapper {
+  overflow: auto;
+}
+
+.drilldown-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.drilldown-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #f8fafc;
+  color: #334155;
+  text-align: left;
+  font-weight: 900;
+}
+
+.drilldown-table th,
+.drilldown-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #e2e8f0;
+  vertical-align: top;
+}
+
+.drilldown-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.drilldown-priority-pill,
+.drilldown-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  min-height: 24px;
+  border-radius: 8px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.drilldown-priority-pill {
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+.drilldown-status {
+  background: #e2e8f0;
+  color: #334155;
+  text-transform: capitalize;
+}
+
+.drilldown-status.overdue {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.drilldown-status.in_progress {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.drilldown-status.closed {
+  background: #dcfce7;
+  color: #047857;
+}
+
+.drilldown-action-title {
+  min-width: 180px;
+  font-weight: 900;
+  color: var(--dash-text);
+}
+
+.drilldown-person {
+  display: grid;
+  gap: 2px;
+  min-width: 150px;
+}
+
+.drilldown-person strong {
+  color: var(--dash-text);
+  font-weight: 900;
+}
+
+.drilldown-person span {
+  color: var(--dash-muted);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+.drilldown-view-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 96px;
+  min-height: 28px;
+  border-radius: 8px;
+  background: var(--dash-blue);
+  color: #ffffff;
+  padding: 5px 8px;
+  font-size: 11px;
+  font-weight: 900;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
 @keyframes dashboard-spin {
   to {
     transform: rotate(360deg);
@@ -319,5 +519,22 @@
 
   .dashboard-scope-tabs button {
     white-space: nowrap;
+  }
+
+  .drilldown-modal-overlay {
+    padding: 10px;
+  }
+
+  .drilldown-modal-header {
+    padding: 12px;
+  }
+
+  .drilldown-modal-header h3 {
+    font-size: 16px;
+  }
+
+  .drilldown-table th,
+  .drilldown-table td {
+    padding: 9px 10px;
   }
 }
