@@ -91,7 +91,7 @@ export const ActionHistoryModal = ({ actionId, actionTitle, onClose }) => {
       setDownloadError(
         err?.message ||
           err?.response?.data?.detail ||
-          "Attachment file not found or legacy file is unavailable."
+          "Unable to download attachment."
       );
     }
   };

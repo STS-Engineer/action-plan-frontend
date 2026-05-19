@@ -53,7 +53,7 @@ export const ActionLatestHistoryCells = ({ action }) => {
       window.alert(
         error?.message ||
           error?.response?.data?.detail ||
-          "Attachment file not found or legacy file is unavailable."
+          "Unable to download attachment."
       );
     }
   };

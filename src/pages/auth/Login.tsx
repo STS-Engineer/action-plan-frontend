@@ -2,6 +2,11 @@ import { useState } from "react";
 import { useNavigate, Link } from "react-router";
 import { loginUser } from "../../services/authService";
 import { clearRedirect, getStoredRedirect } from "../../utils/actionDeepLink";
+import {
+  clearSessionExpiredMessage,
+  getSessionExpiredMessage,
+  storeAuthTokens,
+} from "../../services/axiosInstance";
 import "./Auth.css";
 
 export default function Login() {
@@ -11,7 +16,7 @@ export default function Login() {
   const [password, setPassword] = useState("");
 
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState(() => getSessionExpiredMessage() || "");
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,8 +27,12 @@ export default function Login() {
 
       const data = await loginUser(email, password);
 
-      localStorage.setItem("token", data.access_token);
+      storeAuthTokens({
+        access_token: data.access_token,
+        refresh_token: data.refresh_token,
+      });
       localStorage.setItem("user", JSON.stringify(data.user));
+      clearSessionExpiredMessage();
 
       const redirectTarget = getStoredRedirect();
       clearRedirect();

@@ -105,8 +105,16 @@ export const updateActionStatus = async (
     };
   } catch (error) {
     dispatch(updateActionStatusFailure(error));
+    const requestUrl = String((error as any)?.config?.url || "");
+    const isAttachmentRequest = requestUrl.includes("/attachments");
     const message =
-      (error as any)?.response?.data?.detail ||
+      (isAttachmentRequest
+        ? normalizeAttachmentErrorMessage(
+            (error as any)?.response?.status,
+            (error as any)?.response?.data?.detail,
+            "Unable to upload attachment."
+          )
+        : (error as any)?.response?.data?.detail) ||
       (error as any)?.message ||
       "Failed to update action status.";
 
@@ -218,6 +226,35 @@ const readJsonBlob = async (blob: Blob) => {
     }
 };
 
+const normalizeAttachmentErrorMessage = (
+    status?: number,
+    detail?: string,
+    fallback = "Unable to download attachment."
+) => {
+    const normalizedDetail = String(detail || "").toLowerCase();
+
+    if (status === 403) {
+        return "You do not have permission to access this attachment.";
+    }
+
+    if (status === 404) {
+        return "Attachment file not found.";
+    }
+
+    if (
+        status === 503 ||
+        normalizedDetail.includes("attachment storage temporarily unavailable") ||
+        normalizedDetail.includes("azure storage is not configured") ||
+        normalizedDetail.includes("storage is not configured") ||
+        normalizedDetail.includes("failed to initialize attachment storage") ||
+        normalizedDetail.includes("failed to generate attachment download url")
+    ) {
+        return "Attachment storage temporarily unavailable.";
+    }
+
+    return detail || fallback;
+};
+
 const openDownloadUrl = (downloadUrl: string, fileName: string) => {
     const link = document.createElement("a");
 
@@ -240,11 +277,13 @@ const normalizeAttachmentDownloadError = async (error: any) => {
         detail = payload?.detail || detail;
     }
 
-    if (status === 404) {
-        return new Error("Attachment file not found or legacy file is unavailable.");
-    }
-
-    return new Error(detail || error?.message || "Unable to download attachment.");
+    return new Error(
+        normalizeAttachmentErrorMessage(
+            status,
+            detail,
+            error?.message || "Unable to download attachment."
+        )
+    );
 };
 
 export const downloadActionAttachment = async (

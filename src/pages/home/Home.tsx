@@ -8,6 +8,7 @@ import { ItemCard } from '../../components/ItemCard';
 import { StatusBadge } from '../../components/StatusBadge';
 import { ActionHistoryModal } from '../../components/ActionHistoryModal';
 import { ActionLatestHistoryCells } from '../../components/ActionLatestHistoryCells';
+import { AiActionPlanAssistant } from '../../components/AiActionPlanAssistant';
 import {
   actionMatchesFlatKpiFilter,
   FlatFilteredActionsTable,
@@ -18,7 +19,7 @@ import Select from 'react-select';
 import { getActionAccess, getEmails, smartSearchActions } from '../../redux/action/action';
 import { getActionHomeStatusBucket } from '../../utils/actionHomeStatus';
 import { clearTargetActionId, getStoredTargetActionId, storeTargetActionId } from '../../utils/actionDeepLink';
-import { createAiActionPlan, generateAiActionPlanDraft } from '../../services/aiActionPlanService';
+import { clearAuthTokens } from '../../services/axiosInstance';
 
 const normalizeEmail = (value?: string | null) => value?.trim().toLowerCase() || null;
 type KpiFilter = "closed" | "in_progress" | "overdue";
@@ -52,12 +53,6 @@ const Home = () => {
   const [deepLinkAccessLoading, setDeepLinkAccessLoading] = useState(false);
   const [accessDeniedMessage, setAccessDeniedMessage] = useState<string | null>(null);
   const [aiModalOpen, setAiModalOpen] = useState(false);
-  const [aiPrompt, setAiPrompt] = useState('');
-  const [aiDraftText, setAiDraftText] = useState('');
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiCreating, setAiCreating] = useState(false);
-  const [aiError, setAiError] = useState<string | null>(null);
-  const [aiWarnings, setAiWarnings] = useState<string[]>([]);
   const [targetActionId, setTargetActionId] = useState<string | null>(() => {
     return new URLSearchParams(window.location.search).get("actionId") || getStoredTargetActionId();
   });
@@ -68,8 +63,7 @@ const Home = () => {
   const [email, setEmail] = useState<string | null>(loggedUser?.email || null);
 
 const handleLogout = () => {
-  localStorage.removeItem("token");
-  localStorage.removeItem("user");
+  clearAuthTokens();
 
   window.location.href = "/login";
 };
@@ -98,76 +92,10 @@ const handleLogout = () => {
 
   const openAiModal = () => {
     setAiModalOpen(true);
-    setAiError(null);
   };
 
   const closeAiModal = () => {
-    if (aiLoading || aiCreating) return;
-
     setAiModalOpen(false);
-    setAiError(null);
-  };
-
-  const generateAiDraft = async () => {
-    if (!loggedUserEmail) {
-      setAiError('You must be logged in to create an action plan.');
-      return;
-    }
-
-    if (!aiPrompt.trim()) {
-      setAiError('Describe the action plan you want to create.');
-      return;
-    }
-
-    try {
-      setAiLoading(true);
-      setAiError(null);
-      setAiWarnings([]);
-
-      const draft = await generateAiActionPlanDraft({
-        prompt: aiPrompt,
-        inserted_by: loggedUserEmail,
-        scope: viewMode,
-      });
-
-      setAiDraftText(JSON.stringify(draft, null, 2));
-      setAiWarnings(draft?.warnings || []);
-    } catch (err: any) {
-      setAiError(err?.response?.data?.detail || err?.message || 'Unable to generate draft.');
-    } finally {
-      setAiLoading(false);
-    }
-  };
-
-  const createAiPlan = async () => {
-    if (!aiDraftText.trim()) {
-      setAiError('Generate a draft before creating the action plan.');
-      return;
-    }
-
-    try {
-      setAiCreating(true);
-      setAiError(null);
-
-      const draft = JSON.parse(aiDraftText);
-      const result = await createAiActionPlan(draft);
-
-      setAiModalOpen(false);
-      setAiPrompt('');
-      setAiDraftText('');
-      setAiWarnings([]);
-      setSelectedKpiFilter(null);
-      setSearchTerm(draft?.plan_title || result?.plan_title || '');
-      await fetchData();
-    } catch (err: any) {
-      if (err instanceof SyntaxError) {
-        setAiError('Draft JSON is invalid. Fix it before creating the action plan.');
-      } else {
-        setAiError(err?.response?.data?.detail || err?.message || 'Unable to create action plan.');
-      }
-    } finally {
-      setAiCreating(false);
-    }
   };
 
   const fetchData = async () => {
@@ -238,6 +166,12 @@ const handleLogout = () => {
     }
 
     setSelectedKpiFilter((current) => current === filter ? null : filter);
+  };
+
+  const handleAiPlanCreated = async (result: any, draft: any) => {
+    setSelectedKpiFilter(null);
+    setSearchTerm(draft?.plan_title || result?.plan_title || '');
+    await fetchData();
   };
 
   const handleFlatStatusChange = async (actionId: number, newStatus: string, options: any) => {
@@ -832,101 +766,13 @@ const handleLogout = () => {
         </div>
       </div>
     </div>
-    {aiModalOpen && (
-      <div className="ai-modal-overlay" onClick={closeAiModal}>
-        <section
-          className="ai-modal"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="ai-modal-title"
-          onClick={(event) => event.stopPropagation()}
-        >
-          <header className="ai-modal-header">
-            <div>
-              <h3 id="ai-modal-title">Create action plan with AI</h3>
-              <p>Generate a draft, edit it, then validate before saving.</p>
-            </div>
-
-            <button
-              type="button"
-              className="ai-modal-close"
-              onClick={closeAiModal}
-              disabled={aiLoading || aiCreating}
-              aria-label="Close AI assistant"
-            >
-              <X size={18} />
-            </button>
-          </header>
-
-          <label className="ai-modal-label">Prompt</label>
-          <textarea
-            className="ai-prompt-input"
-            placeholder="Create an action plan to reduce overdue supplier deliveries"
-            value={aiPrompt}
-            onChange={(event) => setAiPrompt(event.target.value)}
-            rows={4}
-          />
-
-          <div className="ai-modal-actions">
-            <button
-              type="button"
-              className="cancel-button"
-              onClick={closeAiModal}
-              disabled={aiLoading || aiCreating}
-            >
-              Cancel
-            </button>
-
-            <button
-              type="button"
-              className="ai-generate-button"
-              onClick={generateAiDraft}
-              disabled={aiLoading || aiCreating}
-            >
-              {aiLoading ? 'Generating...' : 'Generate draft'}
-            </button>
-          </div>
-
-          {aiError && (
-            <div className="status-modal-error">
-              {aiError}
-            </div>
-          )}
-
-          {aiWarnings.length > 0 && (
-            <div className="ai-warning-box">
-              {aiWarnings.map((warning) => (
-                <div key={warning}>{warning}</div>
-              ))}
-            </div>
-          )}
-
-          {aiDraftText && (
-            <>
-              <label className="ai-modal-label">Editable draft JSON</label>
-              <textarea
-                className="ai-draft-preview"
-                value={aiDraftText}
-                onChange={(event) => setAiDraftText(event.target.value)}
-                rows={16}
-                spellCheck={false}
-              />
-
-              <div className="ai-modal-actions">
-                <button
-                  type="button"
-                  className="save-button"
-                  onClick={createAiPlan}
-                  disabled={aiCreating || aiLoading}
-                >
-                  {aiCreating ? 'Creating...' : 'Create action plan'}
-                </button>
-              </div>
-            </>
-          )}
-        </section>
-      </div>
-    )}
+    <AiActionPlanAssistant
+      open={aiModalOpen}
+      onClose={closeAiModal}
+      loggedUserEmail={loggedUserEmail}
+      scope={viewMode}
+      onCreated={handleAiPlanCreated}
+    />
     {historyAction && (
       <ActionHistoryModal
         actionId={historyAction.id}
