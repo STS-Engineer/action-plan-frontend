@@ -20,6 +20,7 @@ import { Link } from 'react-router';
 import { getActionHomeStatusBucket } from '../utils/actionHomeStatus';
 import { ActionHistoryModal } from './ActionHistoryModal';
 import { ActionLatestHistoryCells } from './ActionLatestHistoryCells';
+import { ActionDeleteButton } from './ActionDeleteButton';
 
 const SUJET_LABELS = ['Topic', 'Subtopic', 'Sub-subtopic', 'Nested subtopic'];
 const ACTION_LABELS = ['Action', 'Sub-action', 'Sub-sub-action', 'Nested action'];
@@ -37,6 +38,10 @@ export const ItemCard = (props) => {
     targetActionId = null,
     highlightActionId = null,
     forceExpandedSujetIds = [],
+    onForceExpandConsumed = null,
+    onActionDeleted = null,
+    loggedUserEmail = null,
+    viewMode = 'my',
   } = props;
   const dispatch = useDispatch();
   const [expanded, setExpanded] = useState(false);
@@ -171,15 +176,23 @@ export const ItemCard = (props) => {
   }, [item.status]);
 
   useEffect(() => {
-    if (!isForcedExpandedSujet || expanded || loading) return;
+    if (!isForcedExpandedSujet) return;
+
+    if (expanded) {
+      onForceExpandConsumed?.(item.id);
+      return;
+    }
+
+    if (loading) return;
 
     const expandCreatedSujet = async () => {
       await fetchChildren();
       setExpanded(true);
+      onForceExpandConsumed?.(item.id);
     };
 
     expandCreatedSujet();
-  }, [isForcedExpandedSujet, expanded, loading, item.id]);
+  }, [isForcedExpandedSujet, expanded, loading, item.id, onForceExpandConsumed]);
 
   const openHistory = (action, event) => {
     event.stopPropagation();
@@ -188,6 +201,17 @@ export const ItemCard = (props) => {
 
   const closeHistory = () => {
     setHistoryAction(null);
+  };
+
+  const handleActionDeleted = (deletedAction, result) => {
+    const deletedIds = new Set(
+      (result?.deleted_action_ids || [deletedAction.id]).map((id) => String(id))
+    );
+
+    setChildren((prev) =>
+      prev.filter((child) => !deletedIds.has(String(child.id)))
+    );
+    onActionDeleted?.(deletedAction, result);
   };
 
   return (
@@ -263,6 +287,12 @@ export const ItemCard = (props) => {
                         <History size={14} />
                         History
                       </button>
+                      <ActionDeleteButton
+                        action={item}
+                        currentUserEmail={loggedUserEmail}
+                        viewMode={viewMode}
+                        onDeleted={handleActionDeleted}
+                      />
                     </div>
                     <span className="action-title">{item.titre}</span>
 
@@ -359,6 +389,10 @@ export const ItemCard = (props) => {
                       targetActionId={targetActionId}
                       highlightActionId={highlightActionId}
                       forceExpandedSujetIds={forceExpandedSujetIds}
+                      onForceExpandConsumed={onForceExpandConsumed}
+                      onActionDeleted={onActionDeleted}
+                      loggedUserEmail={loggedUserEmail}
+                      viewMode={viewMode}
                       onStatusChange={onStatusChange}
                     />
                   ))}
@@ -390,6 +424,7 @@ export const ItemCard = (props) => {
               <th>Last comment</th>
               <th>Fichier joint</th>
               <th>History</th>
+              <th>Delete</th>
 </tr>
         </thead>
 
@@ -461,6 +496,14 @@ export const ItemCard = (props) => {
       <History size={14} />
       History
     </button>
+  </td>
+  <td className="history-cell">
+    <ActionDeleteButton
+      action={child}
+      currentUserEmail={loggedUserEmail}
+      viewMode={viewMode}
+      onDeleted={handleActionDeleted}
+    />
   </td>
 </tr>
           ))}

@@ -35,6 +35,11 @@ export const getActionById = async (actionId: number | string) => {
     return response.data;
 };
 
+export const deleteAction = async (actionId: number | string) => {
+    const response = await axiosInstance.delete(`/api/action_plan_action/actions/${actionId}`);
+    return response.data;
+};
+
 export const getActionAccess = async (actionId: number | string, email: string) => {
     const params = new URLSearchParams();
     params.set("email", email);

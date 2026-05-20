@@ -1,8 +1,12 @@
-import { Bot, CheckCircle2, Loader2, Send, Sparkles, X } from "lucide-react";
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { Bot, CheckCircle2, Loader2, Send, Sparkles, Trash2, X } from "lucide-react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import {
-  createAiActionPlan,
-  generateAiActionPlanDraft,
+  chatWithIaAssistant,
+  createIaAssistantPlan,
+} from "../services/aiActionPlanService";
+import type {
+  IaAssistantConversationState,
+  IaAssistantMessage,
 } from "../services/aiActionPlanService";
 
 type ChatMessage = {
@@ -11,118 +15,78 @@ type ChatMessage = {
   text: string;
 };
 
-type Question = {
-  id: string;
-  prompt: string;
-  quickReplies: string[];
+type AssistantSummary = {
+  plan_title?: string | null;
+  topics?: string[];
+  actions?: string[];
+  features?: string[];
+  actions_count?: number;
+  main_responsible?: string | null;
+  deadline?: string | null;
+  urgency?: string | null;
+  sub_actions_included?: boolean;
 };
 
-const QUESTIONS: Question[] = [
-  {
-    id: "problem",
-    prompt: "What problem do you want to solve?",
-    quickReplies: ["Reduce supplier delays", "Improve quality response", "Launch a weekly follow-up"],
-  },
-  {
-    id: "responsible",
-    prompt: "Which department, team, or person should be responsible?",
-    quickReplies: ["My team", "Supply chain", "Quality team", "Production"],
-  },
-  {
-    id: "deadline",
-    prompt: "What deadline or target date should I plan around?",
-    quickReplies: ["This week", "End of month", "30 days", "Next quarter"],
-  },
-  {
-    id: "structure",
-    prompt: "Should I create sub-actions and nested topics where useful?",
-    quickReplies: ["Add sub-actions", "Keep it simple", "Detailed recursive plan"],
-  },
-  {
-    id: "followup",
-    prompt: "Do you want recurring follow-up actions?",
-    quickReplies: ["Weekly follow-up", "Daily follow-up", "No recurring follow-up"],
-  },
-  {
-    id: "priority",
-    prompt: "Is this urgent, strategic, or a normal priority?",
-    quickReplies: ["High priority", "Medium priority", "Urgent", "Strategic"],
-  },
-  {
-    id: "escalation",
-    prompt: "Should overdue actions be escalated automatically?",
-    quickReplies: ["Escalate if overdue", "No escalation", "Escalate after 7 days"],
-  },
+const SUGGESTED_PROMPTS = [
+  "Create action plan",
+  "Reduce supplier delays",
+  "Improve overdue actions",
+  "Prepare customer corrective action plan",
+  "Build weekly follow-up plan",
+];
+
+const MODIFICATION_PROMPTS = [
+  "Make it more urgent",
+  "Assign it to Taha",
+  "Add weekly follow-up",
+  "Simplify the plan",
 ];
 
 const createMessageId = () => `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
-const countSujets = (sujets: any[] = []): number => (
-  sujets.reduce((total, sujet) => total + 1 + countSujets(sujet.sujets || []), 0)
+const createWelcomeMessages = (): ChatMessage[] => [
+  {
+    id: createMessageId(),
+    role: "assistant",
+    text: "Hello, I am IA Assistant. Tell me what you want to improve, and I will ask a few questions before creating anything.",
+  },
+  {
+    id: createMessageId(),
+    role: "assistant",
+    text: "What problem or objective should this action plan solve?",
+  },
+];
+
+const toApiMessages = (messages: ChatMessage[]): IaAssistantMessage[] => (
+  messages.map((message) => ({
+    role: message.role,
+    content: message.text,
+  }))
 );
 
-const collectActions = (sujets: any[] = []) => {
-  const actions: any[] = [];
-
-  const visitAction = (action: any) => {
-    actions.push(action);
-    (action.sub_actions || []).forEach(visitAction);
-  };
-
-  const visitSujet = (sujet: any) => {
-    (sujet.actions || []).forEach(visitAction);
-    (sujet.sujets || []).forEach(visitSujet);
-  };
-
-  sujets.forEach(visitSujet);
-  return actions;
-};
-
-const collectSujets = (sujets: any[] = []) => {
-  const result: any[] = [];
-
-  const visitSujet = (sujet: any) => {
-    result.push(sujet);
-    (sujet.sujets || []).forEach(visitSujet);
-  };
-
-  sujets.forEach(visitSujet);
-  return result;
-};
-
-const buildPromptFromAnswers = (
-  answers: Record<string, string>,
-  scope: "my" | "team"
-) => {
-  const lines = [
-    "Create an enterprise action plan from this conversation.",
-    `Scope: ${scope}.`,
-    `Problem: ${answers.problem || "Not specified"}.`,
-    `Responsible department/team/person: ${answers.responsible || "Not specified"}.`,
-    `Deadline: ${answers.deadline || "Not specified"}.`,
-    `Structure preference: ${answers.structure || "Not specified"}.`,
-    `Follow-up preference: ${answers.followup || "Not specified"}.`,
-    `Priority: ${answers.priority || "Not specified"}.`,
-    `Escalation preference: ${answers.escalation || "Not specified"}.`,
-    answers.modification ? `Requested modifications: ${answers.modification}.` : null,
-    "Create clear topics, nested topics when useful, actions, sub-actions, responsables, due dates, urgency, importance, and escalation fields.",
-  ].filter(Boolean);
-
-  return lines.join("\n");
-};
-
 const getFriendlyError = (error: any) => {
+  const status = error?.response?.status;
   const detail = String(error?.response?.data?.detail || error?.message || "");
+  const normalized = detail.toLowerCase();
 
-  if (
-    error?.response?.status >= 500 ||
-    detail.toLowerCase().includes("openai") ||
-    detail.toLowerCase().includes("ai")
-  ) {
-    return "AI assistant temporarily unavailable.";
+  if (status === 401) {
+    return "Your session expired. Please log in again.";
   }
 
-  return detail || "AI assistant temporarily unavailable.";
+  if (
+    status >= 500 ||
+    normalized.includes("temporarily unavailable") ||
+    normalized.includes("openai") ||
+    normalized.includes("ai assistant")
+  ) {
+    return "IA Assistant is temporarily unavailable.";
+  }
+
+  if (status === 422 || normalized.includes("validation")) {
+    return "IA Assistant could not validate this plan. Please adjust your request and try again.";
+  }
+
+  return detail || "IA Assistant is temporarily unavailable.";
 };
 
 export function AiActionPlanAssistant({
@@ -139,164 +103,156 @@ export function AiActionPlanAssistant({
   onCreated: (result: any, draft: any) => Promise<void> | void;
 }) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [questionIndex, setQuestionIndex] = useState(0);
   const [inputValue, setInputValue] = useState("");
   const [draft, setDraft] = useState<any | null>(null);
+  const [summary, setSummary] = useState<AssistantSummary | null>(null);
   const [loadingText, setLoadingText] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [isModifying, setIsModifying] = useState(false);
+  const [conversationState, setConversationState] = useState<IaAssistantConversationState | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const requestInFlightRef = useRef(false);
 
-  const currentQuestion = QUESTIONS[questionIndex];
-  const isWorking = Boolean(loadingText);
-  const isReadyForSummary = Boolean(draft);
-  const isCollectingModification = !draft && questionIndex >= QUESTIONS.length;
-  const planActions = useMemo(() => collectActions(draft?.sujets || []), [draft]);
-  const planSujets = useMemo(() => collectSujets(draft?.sujets || []), [draft]);
+  const isWorking = Boolean(loadingText) || requestInFlightRef.current;
+  const isReadyForSummary = Boolean(draft && summary);
+
+  const resetConversation = () => {
+    setMessages(createWelcomeMessages());
+    setInputValue("");
+    setDraft(null);
+    setSummary(null);
+    setLoadingText("");
+    setError(null);
+    setIsModifying(false);
+    setConversationState({
+      scope,
+      current_step: "objective",
+    });
+    requestInFlightRef.current = false;
+  };
 
   useEffect(() => {
     if (!open) return;
-
-    setMessages([
-      {
-        id: createMessageId(),
-        role: "assistant",
-        text: "I can help you build an action plan through a few questions, then I will show you a clear summary before creating anything.",
-      },
-      {
-        id: createMessageId(),
-        role: "assistant",
-        text: QUESTIONS[0].prompt,
-      },
-    ]);
-    setAnswers({});
-    setQuestionIndex(0);
-    setInputValue("");
-    setDraft(null);
-    setLoadingText("");
-    setError(null);
-  }, [open]);
+    resetConversation();
+  }, [open, scope]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [messages, loadingText, draft]);
+  }, [messages, loadingText, summary]);
 
   if (!open) return null;
 
   const appendMessage = (role: ChatMessage["role"], text: string) => {
-    setMessages((current) => [
-      ...current,
-      {
-        id: createMessageId(),
-        role,
-        text,
-      },
-    ]);
+    const message = {
+      id: createMessageId(),
+      role,
+      text,
+    };
+
+    setMessages((current) => [...current, message]);
+    return message;
   };
 
-  const generateDraft = async (nextAnswers: Record<string, string>) => {
+  const sendMessage = async (content: string) => {
+    const normalizedContent = content.trim();
+
+    if (!normalizedContent || requestInFlightRef.current || loadingText) return;
+
     if (!loggedUserEmail) {
-      setError("You must be logged in to create an action plan.");
+      setError("You must be logged in to use IA Assistant.");
       return;
     }
 
-    try {
-      setError(null);
-      setLoadingText("Analyzing your request...");
+    const userMessage = {
+      id: createMessageId(),
+      role: "user" as const,
+      text: normalizedContent,
+    };
+    const nextMessages = [...messages, userMessage];
 
-      const generatedDraft = await generateAiActionPlanDraft({
-        prompt: buildPromptFromAnswers(nextAnswers, scope),
+    setMessages(nextMessages);
+    setInputValue("");
+    setDraft(null);
+    setSummary(null);
+    setError(null);
+    setIsModifying(false);
+    requestInFlightRef.current = true;
+    setLoadingText("Analyzing your request...");
+
+    try {
+      const response = await chatWithIaAssistant({
+        messages: toApiMessages(nextMessages),
         inserted_by: loggedUserEmail,
         scope,
+        conversation_state: conversationState,
       });
 
-      setLoadingText("Generating action structure...");
-      setDraft(generatedDraft);
       appendMessage(
         "assistant",
-        "I prepared a structured plan. Please review the summary below, then create it or ask me to modify it."
+        response?.reply || "I need a little more information before I can create the plan."
       );
+
+      if (response?.state === "ready_to_create") {
+        setDraft(response.draft || null);
+        setSummary(response.summary || null);
+      }
+
+      if (response?.conversation_state) {
+        setConversationState(response.conversation_state);
+      }
+
+      if (response?.state === "error") {
+        setError(response?.reply || "IA Assistant is temporarily unavailable.");
+      }
     } catch (err: any) {
-      setError(getFriendlyError(err));
-      appendMessage("assistant", "I could not generate the plan right now. Please try again in a moment.");
+      const friendlyMessage = getFriendlyError(err);
+      setError(friendlyMessage);
+      appendMessage("assistant", friendlyMessage);
     } finally {
+      requestInFlightRef.current = false;
       setLoadingText("");
     }
   };
 
-  const submitAnswer = async (answer: string) => {
-    const normalizedAnswer = answer.trim();
-
-    if (!normalizedAnswer || isWorking) return;
-
-    if (isReadyForSummary || isCollectingModification) {
-      setDraft(null);
-      setError(null);
-      appendMessage("user", normalizedAnswer);
-      appendMessage("assistant", "Got it. I will revise the plan with that change.");
-
-      const revisedAnswers = {
-        ...answers,
-        modification: [answers.modification, normalizedAnswer].filter(Boolean).join(" | "),
-      };
-
-      setAnswers(revisedAnswers);
-      await generateDraft(revisedAnswers);
-      return;
-    }
-
-    const question = QUESTIONS[questionIndex];
-    const nextAnswers = {
-      ...answers,
-      [question.id]: normalizedAnswer,
-    };
-
-    appendMessage("user", normalizedAnswer);
-    setAnswers(nextAnswers);
-    setInputValue("");
-
-    const nextQuestionIndex = questionIndex + 1;
-
-    if (nextQuestionIndex < QUESTIONS.length) {
-      setQuestionIndex(nextQuestionIndex);
-      appendMessage("assistant", QUESTIONS[nextQuestionIndex].prompt);
-      return;
-    }
-
-    await generateDraft(nextAnswers);
-  };
-
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    await submitAnswer(inputValue);
+    await sendMessage(inputValue);
   };
 
   const handleCreate = async () => {
-    if (!draft || isWorking) return;
+    if (!draft || requestInFlightRef.current || loadingText || !loggedUserEmail) return;
 
     try {
       setError(null);
+      requestInFlightRef.current = true;
       setLoadingText("Creating action plan...");
-      const result = await createAiActionPlan(draft);
-      appendMessage("assistant", "Done. The action plan has been created and will appear in Home.");
+
+      const result = await createIaAssistantPlan({
+        draft,
+        inserted_by: loggedUserEmail,
+        scope,
+      });
+
+      appendMessage("assistant", "Action plan created successfully.");
       await onCreated(result, draft);
       onClose();
     } catch (err: any) {
       setError(getFriendlyError(err));
     } finally {
+      requestInFlightRef.current = false;
       setLoadingText("");
     }
   };
 
   const handleModify = () => {
-    setError(null);
     setDraft(null);
+    setSummary(null);
+    setError(null);
+    setIsModifying(true);
     appendMessage("assistant", "What would you like me to change?");
   };
 
-  const visibleQuickReplies = isReadyForSummary || isCollectingModification
-    ? ["Add sub-actions", "Make it urgent", "Add weekly follow-up", "Simplify the plan"]
-    : currentQuestion?.quickReplies || [];
+  const visibleQuickReplies = isReadyForSummary || isModifying ? MODIFICATION_PROMPTS : SUGGESTED_PROMPTS;
 
   return (
     <div className="ai-modal-overlay" onClick={isWorking ? undefined : onClose}>
@@ -313,20 +269,31 @@ export function AiActionPlanAssistant({
               <Bot size={20} />
             </div>
             <div>
-              <h3 id="ai-modal-title">AI action-plan assistant</h3>
-              <p>Answer a few questions, review the summary, then create the plan.</p>
+              <h3 id="ai-modal-title">IA Assistant</h3>
+              <p>Chat through the plan, review the summary, then create it.</p>
             </div>
           </div>
 
-          <button
-            type="button"
-            className="ai-modal-close"
-            onClick={onClose}
-            disabled={isWorking}
-            aria-label="Close AI assistant"
-          >
-            <X size={18} />
-          </button>
+          <div className="ai-modal-header-actions">
+            <button
+              type="button"
+              className="ai-clear-button"
+              onClick={resetConversation}
+              disabled={isWorking}
+            >
+              <Trash2 size={15} />
+              Clear
+            </button>
+            <button
+              type="button"
+              className="ai-modal-close"
+              onClick={onClose}
+              disabled={isWorking}
+              aria-label="Close IA Assistant"
+            >
+              <X size={18} />
+            </button>
+          </div>
         </header>
 
         <div className="ai-chat-body">
@@ -354,26 +321,54 @@ export function AiActionPlanAssistant({
             <div ref={messagesEndRef} />
           </div>
 
-          {draft && (
-            <aside className="ai-plan-summary" aria-label="AI action plan summary">
+          {summary && (
+            <aside className="ai-plan-summary" aria-label="IA Assistant action plan summary">
               <div className="ai-plan-summary-header">
                 <Sparkles size={16} />
                 <div>
                   <span>Ready to create</span>
-                  <strong>{draft.plan_title}</strong>
+                  <strong>{summary.plan_title || "Action plan"}</strong>
                 </div>
               </div>
 
               <div className="ai-plan-stats">
-                <span>{countSujets(draft.sujets)} topics</span>
-                <span>{planActions.length} actions</span>
+                <span>{summary.topics?.length || 0} topics</span>
+                <span>{summary.actions_count || 0} actions</span>
+              </div>
+
+              <div className="ai-summary-grid">
+                <div>
+                  <span>Responsible</span>
+                  <strong>{summary.main_responsible || "To confirm"}</strong>
+                </div>
+                <div>
+                  <span>Deadline</span>
+                  <strong>{summary.deadline || "To confirm"}</strong>
+                </div>
+                <div>
+                  <span>Urgency</span>
+                  <strong>{summary.urgency || "Normal"}</strong>
+                </div>
+                <div>
+                  <span>Sub-actions</span>
+                  <strong>{summary.sub_actions_included ? "Included" : "Not included"}</strong>
+                </div>
+              </div>
+
+              <div className="ai-summary-section">
+                <h4>Features</h4>
+                <ul>
+                  {(summary.features?.length ? summary.features : ["Standard follow-up"]).map((feature) => (
+                    <li key={feature}>{feature}</li>
+                  ))}
+                </ul>
               </div>
 
               <div className="ai-summary-section">
                 <h4>Topics</h4>
                 <ul>
-                  {planSujets.slice(0, 8).map((sujet: any) => (
-                    <li key={`${sujet.code || sujet.titre}-topic`}>{sujet.titre}</li>
+                  {(summary.topics || []).slice(0, 8).map((topic) => (
+                    <li key={topic}>{topic}</li>
                   ))}
                 </ul>
               </div>
@@ -381,35 +376,28 @@ export function AiActionPlanAssistant({
               <div className="ai-summary-section">
                 <h4>Actions</h4>
                 <ul>
-                  {planActions.slice(0, 10).map((action: any, index: number) => (
-                    <li key={`${action.titre}-${index}`}>
-                      <span>{action.titre}</span>
-                      <small>
-                        {[action.responsable, action.due_date, action.urgency]
-                          .filter(Boolean)
-                          .join(" | ")}
-                      </small>
-                    </li>
+                  {(summary.actions || []).slice(0, 10).map((action, index) => (
+                    <li key={`${action}-${index}`}>{action}</li>
                   ))}
                 </ul>
               </div>
 
-              {draft.warnings?.length > 0 && (
-                <div className="ai-warning-box">
-                  {draft.warnings.map((warning: string) => (
-                    <div key={warning}>{warning}</div>
-                  ))}
-                </div>
-              )}
-
               <div className="ai-confirm-actions">
+                <button
+                  type="button"
+                  className="cancel-button"
+                  onClick={onClose}
+                  disabled={isWorking}
+                >
+                  Cancel
+                </button>
                 <button
                   type="button"
                   className="cancel-button"
                   onClick={handleModify}
                   disabled={isWorking}
                 >
-                  Modify
+                  Ask to modify
                 </button>
                 <button
                   type="button"
@@ -418,7 +406,7 @@ export function AiActionPlanAssistant({
                   disabled={isWorking}
                 >
                   <CheckCircle2 size={15} />
-                  Create Plan
+                  Create action plan
                 </button>
               </div>
             </aside>
@@ -436,7 +424,7 @@ export function AiActionPlanAssistant({
             <button
               type="button"
               key={reply}
-              onClick={() => submitAnswer(reply)}
+              onClick={() => sendMessage(reply)}
               disabled={isWorking}
             >
               {reply}
@@ -450,9 +438,9 @@ export function AiActionPlanAssistant({
             value={inputValue}
             onChange={(event) => setInputValue(event.target.value)}
             placeholder={
-              isReadyForSummary || isCollectingModification
-                ? "Ask for a modification..."
-                : "Type your answer..."
+              isReadyForSummary
+                ? "Ask IA Assistant to modify the plan..."
+                : "Message IA Assistant..."
             }
             disabled={isWorking}
           />

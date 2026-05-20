@@ -1,6 +1,6 @@
 import { useDispatch, useSelector } from 'react-redux';
 import './Home.css';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { getHomeSummary, getSujetsRacineList, getTeamSujetsRacineList } from '../../redux/sujet/sujet';
 import { AlertCircle, Bot, CheckCircle2, Clock, Folder, FolderOpen, History, Search, X } from 'lucide-react';
@@ -8,6 +8,7 @@ import { ItemCard } from '../../components/ItemCard';
 import { StatusBadge } from '../../components/StatusBadge';
 import { ActionHistoryModal } from '../../components/ActionHistoryModal';
 import { ActionLatestHistoryCells } from '../../components/ActionLatestHistoryCells';
+import { ActionDeleteButton } from '../../components/ActionDeleteButton';
 import { AiActionPlanAssistant } from '../../components/AiActionPlanAssistant';
 import {
   actionMatchesFlatKpiFilter,
@@ -59,6 +60,7 @@ const Home = () => {
   const [accessDeniedMessage, setAccessDeniedMessage] = useState<string | null>(null);
   const [aiModalOpen, setAiModalOpen] = useState(false);
   const [aiCreatedMessage, setAiCreatedMessage] = useState<string | null>(null);
+  const [actionDeletedMessage, setActionDeletedMessage] = useState<string | null>(null);
   const [aiCreatedPlanFocus, setAiCreatedPlanFocus] = useState<AiCreatedPlanFocus>(null);
   const [targetActionId, setTargetActionId] = useState<string | null>(() => {
     return new URLSearchParams(window.location.search).get("actionId") || getStoredTargetActionId();
@@ -191,7 +193,7 @@ const handleLogout = () => {
     setDeepLinkedAction(null);
     setDeepLinkMessage(null);
     setAccessDeniedMessage(null);
-    setAiCreatedMessage('AI action plan created successfully.');
+    setAiCreatedMessage('IA Assistant action plan created successfully.');
     setAiCreatedPlanFocus({
       rootSujetId,
       sujetIds: createdSujetIds,
@@ -201,6 +203,25 @@ const handleLogout = () => {
     await fetchData();
   };
 
+  const handleForceExpandConsumed = useCallback((sujetId: number | string) => {
+    setAiCreatedPlanFocus((current) => {
+      if (!current) return current;
+
+      const remainingSujetIds = current.sujetIds.filter(
+        (createdSujetId) => String(createdSujetId) !== String(sujetId)
+      );
+
+      if (remainingSujetIds.length === current.sujetIds.length) {
+        return current;
+      }
+
+      return {
+        ...current,
+        sujetIds: remainingSujetIds,
+      };
+    });
+  }, []);
+
   const handleFlatStatusChange = async (actionId: number, newStatus: string, options: any) => {
     await updateActionStatus(dispatch, actionId, newStatus, options);
 
@@ -209,6 +230,25 @@ const handleLogout = () => {
       loggedUserEmail
         ? getHomeSummary(dispatch, loggedUserEmail, viewMode)
         : Promise.resolve(false),
+    ]);
+  };
+
+  const handleActionDeleted = async (deletedAction: any, result: any) => {
+    const deletedIds = new Set(
+      (result?.deleted_action_ids || [deletedAction.id]).map((id: any) => String(id))
+    );
+
+    setActionDeletedMessage('Action deleted.');
+    setSmartResults((current) =>
+      current.filter((action: any) => !deletedIds.has(String(action.id)))
+    );
+    setFilteredActions((current) =>
+      current.filter((action: any) => !deletedIds.has(String(action.id)))
+    );
+
+    await Promise.all([
+      fetchData(),
+      fetchFilteredActions(),
     ]);
   };
 
@@ -554,7 +594,7 @@ const handleLogout = () => {
               onClick={openAiModal}
             >
               <Bot size={16} />
-              Create with AI
+              IA Assistant
             </button>
           </div>
         </div>
@@ -594,8 +634,27 @@ const handleLogout = () => {
                 <button
                   type="button"
                   className="deep-link-close-button"
-                  aria-label="Close AI created plan banner"
+                  aria-label="Close IA Assistant created plan banner"
                   onClick={() => setAiCreatedMessage(null)}
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {actionDeletedMessage && (
+            <div className="action-deep-link-banner action-deleted-banner">
+              <div>
+                <strong>{actionDeletedMessage}</strong>
+                <span>The action was removed from active views. History and attachments are kept for audit.</span>
+              </div>
+              <div className="action-deep-link-actions">
+                <button
+                  type="button"
+                  className="deep-link-close-button"
+                  aria-label="Close action deleted banner"
+                  onClick={() => setActionDeletedMessage(null)}
                 >
                   <X size={16} />
                 </button>
@@ -685,6 +744,7 @@ const handleLogout = () => {
                 <th>Last comment</th>
                 <th>Fichier joint</th>
                 <th>History</th>
+                <th>Delete</th>
               </tr>
           </thead>
 
@@ -766,6 +826,14 @@ const handleLogout = () => {
           History
         </button>
       </td>
+      <td className="history-cell">
+        <ActionDeleteButton
+          action={action}
+          currentUserEmail={loggedUserEmail}
+          viewMode={viewMode}
+          onDeleted={handleActionDeleted}
+        />
+      </td>
     </tr>
   ))}
 </tbody>
@@ -794,6 +862,9 @@ const handleLogout = () => {
       filter={selectedKpiFilter}
       onOpenHistory={setHistoryAction}
       onStatusChange={handleFlatStatusChange}
+      onActionDeleted={handleActionDeleted}
+      currentUserEmail={loggedUserEmail}
+      viewMode={viewMode}
     />
   </>
 )}
@@ -818,6 +889,10 @@ const handleLogout = () => {
             targetActionId={targetActionId}
             highlightActionId={aiCreatedPlanFocus?.actionId}
             forceExpandedSujetIds={aiCreatedPlanFocus?.sujetIds || []}
+            onForceExpandConsumed={handleForceExpandConsumed}
+            onActionDeleted={handleActionDeleted}
+            loggedUserEmail={loggedUserEmail}
+            viewMode={viewMode}
           />
         ))}
       </div>

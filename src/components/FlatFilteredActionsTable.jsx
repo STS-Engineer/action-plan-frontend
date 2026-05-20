@@ -2,6 +2,7 @@ import { History } from "lucide-react";
 import { StatusBadge } from "./StatusBadge";
 import { ActionLatestHistoryCells } from "./ActionLatestHistoryCells";
 import { getActionHomeStatusBucket } from "../utils/actionHomeStatus";
+import { ActionDeleteButton } from "./ActionDeleteButton";
 
 const formatDate = (value) => {
   if (!value) return "-";
@@ -73,6 +74,9 @@ export const FlatFilteredActionsTable = ({
   filter,
   onOpenHistory,
   onStatusChange,
+  onActionDeleted,
+  currentUserEmail,
+  viewMode,
 }) => {
   const visibleActions = (actions || []).filter((action) =>
     actionMatchesFlatKpiFilter(action, filter)
@@ -109,6 +113,7 @@ export const FlatFilteredActionsTable = ({
             <th>Last comment</th>
             <th>Fichier joint</th>
             <th>History</th>
+            <th>Delete</th>
           </tr>
         </thead>
 
@@ -148,6 +153,14 @@ export const FlatFilteredActionsTable = ({
                   <History size={14} />
                   History
                 </button>
+              </td>
+              <td className="history-cell">
+                <ActionDeleteButton
+                  action={action}
+                  currentUserEmail={currentUserEmail}
+                  viewMode={viewMode}
+                  onDeleted={onActionDeleted}
+                />
               </td>
             </tr>
           ))}
