@@ -2,7 +2,12 @@ import { Dispatch } from "redux";
 
 export type GetActionsBySujet = (
     dispatch: Dispatch<any>,
-    sujet_id: number
+    sujet_id: number,
+    options?: {
+        email?: string | null,
+        scope?: "my" | "team" | "requested_by_me",
+        status?: string | null,
+    },
 ) => Promise<boolean>;
 
 export type GetEmails = (

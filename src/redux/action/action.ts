@@ -2,9 +2,27 @@ import axiosInstance from "../../services/axiosInstance";
 import { getActionsBySujetFailure, getActionsBySujetRequest, getActionsBySujetSuccess, getEmailsFailure, getEmailsRequest, getEmailsSuccess, updateActionStatusFailure, updateActionStatusRequest, updateActionStatusSuccess } from "./action-slice";
 import { GetActionsBySujet, GetEmails, UpdateActionStatus } from "./action-types";
 
-export const getActions: GetActionsBySujet = async (dispatch, sujet_id) => {
+export const getActions: GetActionsBySujet = async (dispatch, sujet_id, options = {}) => {
     dispatch(getActionsBySujetRequest());
+    const params = new URLSearchParams();
+
+    if (options.email) {
+        params.set("email", options.email);
+    }
+
+    if (options.scope) {
+        params.set("scope", options.scope);
+    }
+
+    if (options.status) {
+        params.set("status", options.status);
+    }
+
     let url = `/api/action_plan_action/sujets/${sujet_id}/actions`;
+
+    if (params.toString()) {
+        url = `${url}?${params.toString()}`;
+    }
 
     try {
         let response = await axiosInstance.get(url);
@@ -130,7 +148,7 @@ export const smartSearchActions = async (
     query: string,
     options?: {
         email?: string | null;
-        scope?: "my" | "team";
+        scope?: "my" | "team" | "requested_by_me";
         scopedOnly?: boolean;
     }
 ) => {
@@ -162,8 +180,8 @@ export const smartSearchActions = async (
 
 export const getFilteredActions = async (options: {
     email?: string | null;
-    scope: "my" | "team";
-    status: "overdue" | "closed" | "in_progress" | "all";
+    scope: "my" | "team" | "requested_by_me";
+    status: "overdue" | "closed" | "in_progress" | "blocked" | "all";
 }) => {
     if (!options.email) {
         return [];

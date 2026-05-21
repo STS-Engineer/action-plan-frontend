@@ -7,6 +7,7 @@ import {
 import type {
   IaAssistantConversationState,
   IaAssistantMessage,
+  IaAssistantResponsibleCandidate,
 } from "../services/aiActionPlanService";
 
 type ChatMessage = {
@@ -22,6 +23,8 @@ type AssistantSummary = {
   features?: string[];
   actions_count?: number;
   main_responsible?: string | null;
+  main_responsible_email?: string | null;
+  responsible_resolution_status?: string | null;
   deadline?: string | null;
   urgency?: string | null;
   sub_actions_included?: boolean;
@@ -110,6 +113,7 @@ export function AiActionPlanAssistant({
   const [error, setError] = useState<string | null>(null);
   const [isModifying, setIsModifying] = useState(false);
   const [conversationState, setConversationState] = useState<IaAssistantConversationState | null>(null);
+  const [responsibleCandidates, setResponsibleCandidates] = useState<IaAssistantResponsibleCandidate[]>([]);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const requestInFlightRef = useRef(false);
 
@@ -124,6 +128,7 @@ export function AiActionPlanAssistant({
     setLoadingText("");
     setError(null);
     setIsModifying(false);
+    setResponsibleCandidates([]);
     setConversationState({
       scope,
       current_step: "objective",
@@ -176,6 +181,7 @@ export function AiActionPlanAssistant({
     setSummary(null);
     setError(null);
     setIsModifying(false);
+    setResponsibleCandidates([]);
     requestInFlightRef.current = true;
     setLoadingText("Analyzing your request...");
 
@@ -200,6 +206,8 @@ export function AiActionPlanAssistant({
       if (response?.conversation_state) {
         setConversationState(response.conversation_state);
       }
+
+      setResponsibleCandidates(response?.responsible_candidates || []);
 
       if (response?.state === "error") {
         setError(response?.reply || "IA Assistant is temporarily unavailable.");
@@ -249,6 +257,7 @@ export function AiActionPlanAssistant({
     setSummary(null);
     setError(null);
     setIsModifying(true);
+    setResponsibleCandidates([]);
     appendMessage("assistant", "What would you like me to change?");
   };
 
@@ -339,7 +348,12 @@ export function AiActionPlanAssistant({
               <div className="ai-summary-grid">
                 <div>
                   <span>Responsible</span>
-                  <strong>{summary.main_responsible || "To confirm"}</strong>
+                  <strong>
+                    {summary.main_responsible || "To confirm"}
+                    {summary.main_responsible_email ? (
+                      <small>{summary.main_responsible_email}</small>
+                    ) : null}
+                  </strong>
                 </div>
                 <div>
                   <span>Deadline</span>
@@ -416,6 +430,36 @@ export function AiActionPlanAssistant({
         {error && (
           <div className="status-modal-error ai-chat-error">
             {error}
+          </div>
+        )}
+
+        {responsibleCandidates.length > 0 && (
+          <div className="ai-candidate-replies">
+            {responsibleCandidates.map((candidate) => {
+              const label = [
+                candidate.display_name || candidate.email || "Unknown",
+                candidate.email,
+              ].filter(Boolean).join(" - ");
+
+              return (
+                <button
+                  type="button"
+                  key={`${candidate.email || candidate.display_name}`}
+                  onClick={() => sendMessage(candidate.email || candidate.display_name || "")}
+                  disabled={isWorking}
+                >
+                  {label}
+                </button>
+              );
+            })}
+            <button
+              type="button"
+              className="ai-candidate-none"
+              onClick={() => sendMessage("None of these")}
+              disabled={isWorking}
+            >
+              None of these
+            </button>
           </div>
         )}
 

@@ -3,7 +3,7 @@ import './Home.css';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { getHomeSummary, getSujetsRacineList, getTeamSujetsRacineList } from '../../redux/sujet/sujet';
-import { AlertCircle, Bot, CheckCircle2, Clock, Folder, FolderOpen, History, Search, X } from 'lucide-react';
+import { AlertCircle, Ban, Bot, CheckCircle2, Clock, Folder, FolderOpen, History, Search, X } from 'lucide-react';
 import { ItemCard } from '../../components/ItemCard';
 import { StatusBadge } from '../../components/StatusBadge';
 import { ActionHistoryModal } from '../../components/ActionHistoryModal';
@@ -23,7 +23,8 @@ import { clearTargetActionId, getStoredTargetActionId, storeTargetActionId } fro
 import { clearAuthTokens } from '../../services/axiosInstance';
 
 const normalizeEmail = (value?: string | null) => value?.trim().toLowerCase() || null;
-type KpiFilter = "closed" | "in_progress" | "overdue";
+type KpiFilter = "closed" | "in_progress" | "overdue" | "blocked";
+type HomeScope = "my" | "team" | "requested_by_me";
 type AiCreatedPlanFocus = {
   rootSujetId: number | string | null;
   sujetIds: Array<number | string>;
@@ -34,6 +35,7 @@ const KPI_FILTER_LABELS: Record<KpiFilter, string> = {
   closed: "Completed",
   in_progress: "In progress",
   overdue: "Overdue",
+  blocked: "Blocked",
 };
 
 const Home = () => {
@@ -48,7 +50,7 @@ const Home = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [smartResults, setSmartResults] = useState<any[]>([]);
   const [smartSearchLoading, setSmartSearchLoading] = useState(false);
-  const [viewMode, setViewMode] = useState<"my" | "team">("my");
+  const [viewMode, setViewMode] = useState<HomeScope>("my");
   const [selectedKpiFilter, setSelectedKpiFilter] = useState<KpiFilter | null>(null);
   const [filteredActions, setFilteredActions] = useState<any[]>([]);
   const [filteredActionsLoading, setFilteredActionsLoading] = useState(false);
@@ -122,13 +124,11 @@ const handleLogout = () => {
         if (isInitial) setInitialLoading(true);
         else setRefreshing(true);
         setError(null);
-        const scope = viewMode === "team" ? "team" : "my";
-
         await Promise.all([
         viewMode === "team"
           ? getTeamSujetsRacineList(dispatch, loggedUserEmail)
-          : getSujetsRacineList(dispatch, loggedUserEmail),
-        getHomeSummary(dispatch, loggedUserEmail, scope),
+          : getSujetsRacineList(dispatch, loggedUserEmail, null, viewMode),
+        getHomeSummary(dispatch, loggedUserEmail, viewMode),
         getEmails(dispatch),
         ]);
     } catch (err: any) {
@@ -222,15 +222,23 @@ const handleLogout = () => {
     });
   }, []);
 
+  const refreshAfterStatusChange = async (options?: { refreshSmartSearch?: boolean }) => {
+    await Promise.all([
+      fetchData(),
+      selectedKpiFilter ? fetchFilteredActions() : Promise.resolve(),
+      options?.refreshSmartSearch && searchTerm.trim()
+        ? smartSearchActions(searchTerm, {
+            email: loggedUserEmail,
+            scope: viewMode,
+            scopedOnly: true,
+          }).then(setSmartResults)
+        : Promise.resolve(),
+    ]);
+  };
+
   const handleFlatStatusChange = async (actionId: number, newStatus: string, options: any) => {
     await updateActionStatus(dispatch, actionId, newStatus, options);
-
-    await Promise.all([
-      fetchFilteredActions(),
-      loggedUserEmail
-        ? getHomeSummary(dispatch, loggedUserEmail, viewMode)
-        : Promise.resolve(false),
-    ]);
+    await refreshAfterStatusChange();
   };
 
   const handleActionDeleted = async (deletedAction: any, result: any) => {
@@ -315,7 +323,11 @@ const handleLogout = () => {
           return;
         }
 
-        const nextScope = access.scope === 'team' ? 'team' : 'my';
+        const nextScope: HomeScope = access.scope === 'team'
+          ? 'team'
+          : access.scope === 'requester' || access.scope === 'requested_by_me'
+            ? 'requested_by_me'
+            : 'my';
         const action = access.action;
         const actionTitle = action?.titre || `Action #${targetActionId}`;
 
@@ -525,6 +537,13 @@ const handleLogout = () => {
             >
               Team Actions
             </button>
+
+            <button
+              className={viewMode === "requested_by_me" ? "view-tab active" : "view-tab"}
+              onClick={() => setViewMode("requested_by_me")}
+            >
+              Requested by Me
+            </button>
           </div>
 
           <div className="home-toolbar-right">
@@ -583,6 +602,20 @@ const handleLogout = () => {
                       <p className="stat-value">{homeSummary.actions_overdue}</p>
                     </div>
                     <AlertCircle size={18} className="stat-icon" />
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  className={`stat-card stat-card-blocked ${selectedKpiFilter === "blocked" ? "active-filter-card" : ""}`}
+                  onClick={() => handleKpiClick("blocked")}
+                >
+                  <div className="stat-card-content">
+                    <div>
+                      <p className="stat-label">Blocked</p>
+                      <p className="stat-value">{homeSummary.actions_blocked}</p>
+                    </div>
+                    <Ban size={18} className="stat-icon" />
                   </div>
                 </button>
               </div>
@@ -804,14 +837,8 @@ const handleLogout = () => {
   actionId={action.id}
   onMenuToggle={() => {}}
   onStatusChange={async (actionId: number, newStatus: string, options: any) => {
-  await updateActionStatus(dispatch, actionId, newStatus, options);
-
-    const results = await smartSearchActions(searchTerm, {
-      email: loggedUserEmail,
-      scope: viewMode,
-      scopedOnly: true,
-    });
-    setSmartResults(results);
+    await updateActionStatus(dispatch, actionId, newStatus, options);
+    await refreshAfterStatusChange({ refreshSmartSearch: true });
   }}
 />
       </td>
@@ -891,6 +918,7 @@ const handleLogout = () => {
             forceExpandedSujetIds={aiCreatedPlanFocus?.sujetIds || []}
             onForceExpandConsumed={handleForceExpandConsumed}
             onActionDeleted={handleActionDeleted}
+            onActionStatusChanged={() => refreshAfterStatusChange()}
             loggedUserEmail={loggedUserEmail}
             viewMode={viewMode}
           />
@@ -913,7 +941,7 @@ const handleLogout = () => {
       open={aiModalOpen}
       onClose={closeAiModal}
       loggedUserEmail={loggedUserEmail}
-      scope={viewMode}
+      scope={viewMode === "team" ? "team" : "my"}
       onCreated={handleAiPlanCreated}
     />
     {historyAction && (

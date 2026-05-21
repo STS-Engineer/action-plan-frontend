@@ -64,6 +64,10 @@ export const actionMatchesFlatKpiFilter = (action, filter) => {
     return canonicalStatus === "open" || canonicalStatus === "blocked";
   }
 
+  if (filter === "blocked") {
+    return canonicalStatus === "blocked";
+  }
+
   return true;
 };
 

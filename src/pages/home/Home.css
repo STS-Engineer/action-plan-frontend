@@ -101,7 +101,7 @@ body {
 }
 
 .header-content {
-  max-width: 1400px;
+  max-width: 1760px;
   margin: 0 auto;
   padding: 0 2rem;
   display: flex;
@@ -176,9 +176,9 @@ body {
    CONTAINER
    ============================================ */
 .container {
-  max-width: 1400px;
+  max-width: 1760px;
   margin: 0 auto;
-  padding: 1rem 1.5rem 2rem;
+  padding: 1rem 2rem 2.25rem;
 }
 
 .home-toolbar {
@@ -389,6 +389,10 @@ body {
   background: linear-gradient(135deg, #b91c1c, var(--danger));
 }
 
+.stat-card-blocked {
+  background: linear-gradient(135deg, #881337, #be123c);
+}
+
 .stat-card-content {
   display: flex;
   align-items: center;
@@ -461,7 +465,7 @@ body {
   background: var(--surface);
   border-radius: 12px;
   box-shadow: var(--shadow-sm);
-  padding: 1.15rem;
+  padding: 1.25rem 1.35rem;
   border: 1px solid var(--gray-200);
 }
 
@@ -715,6 +719,7 @@ body {
 
 .stat-item.green { color: var(--success); }
 .stat-item.red   { color: var(--danger); }
+.stat-item.blocked { color: #be123c; }
 
 .progress-bar {
   width: 100%;
@@ -777,6 +782,7 @@ body {
    ============================================ */
 .actions-table {
   width: 100%;
+  min-width: 1360px;
   border-collapse: separate;
   border-spacing: 0;
   margin-top: 0.75rem;
@@ -809,12 +815,18 @@ body {
   border-bottom: none;
 }
 
+.actions-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 .flat-actions-table-wrapper {
   margin-top: 0.75rem;
 }
 
 .flat-actions-table {
-  min-width: 1280px;
+  min-width: 1500px;
 }
 
 .topic-path-cell {
@@ -1605,6 +1617,15 @@ body.status-modal-open .status-modal-overlay {
   overflow-wrap: anywhere;
 }
 
+.ai-summary-grid strong small {
+  display: block;
+  margin-top: 3px;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
 .ai-summary-section {
   margin-top: 13px;
 }
@@ -1675,6 +1696,41 @@ body.status-modal-open .status-modal-overlay {
 
 .ai-chat-error {
   margin: 12px 18px 0;
+}
+
+.ai-candidate-replies {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 12px 18px 0;
+  border-top: 1px solid #e5e7eb;
+}
+
+.ai-candidate-replies button {
+  border: 1px solid #99f6e4;
+  border-radius: 9px;
+  background: #f0fdfa;
+  color: #0f766e;
+  min-height: 32px;
+  padding: 6px 10px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+  max-width: min(100%, 360px);
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+
+.ai-candidate-replies .ai-candidate-none {
+  border-color: #e2e8f0;
+  background: #ffffff;
+  color: #334155;
+}
+
+.ai-candidate-replies button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .ai-quick-replies {

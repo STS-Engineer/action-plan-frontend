@@ -21,7 +21,8 @@ export interface Sujet {
     total_actions: number,
     completed_actions: number,
     overdue_actions: number,
-    in_progress_actions: number
+    in_progress_actions: number,
+    blocked_actions: number
 }
 
 export interface HomeSummary {

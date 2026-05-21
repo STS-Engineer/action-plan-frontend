@@ -1,5 +1,6 @@
 import {
   AlertCircle,
+  Ban,
   Calendar,
   CheckCircle2,
   ChevronDown,
@@ -40,6 +41,7 @@ export const ItemCard = (props) => {
     forceExpandedSujetIds = [],
     onForceExpandConsumed = null,
     onActionDeleted = null,
+    onActionStatusChanged = null,
     loggedUserEmail = null,
     viewMode = 'my',
   } = props;
@@ -70,9 +72,9 @@ export const ItemCard = (props) => {
   const priorityClass = isAction && item.priorite ? `priority-${item.priorite}` : '';
   const typeClass = isSujet ? 'is-sujet' : 'is-action';
 
-  const fetchChildren = async () => {
+  const fetchChildren = async (force = false) => {
     if (loading) return;
-    if (expanded && loadedItemId === item.id && children.length > 0) return;
+    if (!force && expanded && loadedItemId === item.id && children.length > 0) return;
 
     setLoading(true);
     setError(null);
@@ -80,8 +82,16 @@ export const ItemCard = (props) => {
     try {
       if (isSujet) {
         const [sousSujets, actions] = await Promise.all([
-          getSujetSousSujets(dispatch, item.id),
-          getActions(dispatch, item.id),
+          getSujetSousSujets(dispatch, item.id, {
+            email: loggedUserEmail,
+            scope: viewMode,
+            status: statusFilter,
+          }),
+          getActions(dispatch, item.id, {
+            email: loggedUserEmail,
+            scope: viewMode,
+            status: statusFilter,
+          }),
         ]);
 
         const mappedSousSujets = (sousSujets || []).map((s) => ({ ...s, itemType: 'sujet' }));
@@ -126,6 +136,10 @@ export const ItemCard = (props) => {
         return false;
       }
 
+      if (statusFilter === 'blocked') {
+        return String(child.status || '').trim().toLowerCase() === 'blocked';
+      }
+
       if (statusFilter && bucket !== statusFilter) {
         return false;
       }
@@ -139,8 +153,11 @@ export const ItemCard = (props) => {
 
     if (!result) return;
 
+    const updatedAction = result.action || {};
+    const effectiveStatus = updatedAction.status || newStatus;
+
     if (item.id === actionId) {
-      setLocalStatus(newStatus);
+      setLocalStatus(effectiveStatus);
     }
 
     const latestHistoryPatch = {
@@ -162,13 +179,26 @@ export const ItemCard = (props) => {
         child.id === actionId
           ? {
               ...child,
-              status: newStatus,
-              closed_date: newStatus === 'closed' ? new Date().toISOString() : null,
+              ...updatedAction,
+              status: effectiveStatus,
+              closed_date: effectiveStatus === 'closed'
+                ? (updatedAction.closed_date || new Date().toISOString())
+                : null,
               ...latestHistoryPatch,
             }
           : child
       )
     );
+
+    await onActionStatusChanged?.(updatedAction, {
+      actionId,
+      status: effectiveStatus,
+      source: 'tree',
+    });
+
+    if (isSujet && expanded) {
+      await fetchChildren(true);
+    }
   };
 
   useEffect(() => {
@@ -260,6 +290,13 @@ export const ItemCard = (props) => {
                         <span className="stat-item red">
                           <AlertCircle size={16} />
                           {item.overdue_actions} overdue
+                        </span>
+                      )}
+
+                      {item.blocked_actions > 0 && (
+                        <span className="stat-item blocked">
+                          <Ban size={16} />
+                          {item.blocked_actions} blocked
                         </span>
                       )}
                     </div>
@@ -391,6 +428,7 @@ export const ItemCard = (props) => {
                       forceExpandedSujetIds={forceExpandedSujetIds}
                       onForceExpandConsumed={onForceExpandConsumed}
                       onActionDeleted={onActionDeleted}
+                      onActionStatusChanged={onActionStatusChanged}
                       loggedUserEmail={loggedUserEmail}
                       viewMode={viewMode}
                       onStatusChange={onStatusChange}

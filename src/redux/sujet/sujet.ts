@@ -42,6 +42,7 @@ export const getSujetsRacineList: GetSujetsRacineListRequestAction = async (
     dispatch,
     email,
     status = null,
+    scope = "my",
 ) => {
     dispatch(getSujetsRacineListRequest());
     const params = new URLSearchParams();
@@ -53,6 +54,8 @@ export const getSujetsRacineList: GetSujetsRacineListRequestAction = async (
     if (status) {
         params.set("status", status);
     }
+
+    params.set("scope", scope);
 
     let url = `/api/action_plan_sujet/sujets-racine`;
 
@@ -107,9 +110,32 @@ export const getHomeSummary: GetHomeSummaryRequestAction = async (
     }
 }
 
-export const getSujetSousSujets: GetSujetSousSujetsListRequestAction = async (dispatch, sujet_id) => {
+export const getSujetSousSujets: GetSujetSousSujetsListRequestAction = async (
+    dispatch,
+    sujet_id,
+    options = {},
+) => {
     dispatch(getSujetSousSujetsListRequest());
+    const params = new URLSearchParams();
+
+    if (options.email) {
+        params.set("email", options.email);
+    }
+
+    if (options.scope) {
+        params.set("scope", options.scope);
+    }
+
+    if (options.status) {
+        params.set("status", options.status);
+    }
+
     let url = `/api/action_plan_sujet/sujets/${sujet_id}/sous-sujets`;
+
+    if (params.toString()) {
+        url = `${url}?${params.toString()}`;
+    }
+
     try {
         let response = await axiosInstance.get(url);
         dispatch(getSujetSousSujetsListSuccess(response.data));

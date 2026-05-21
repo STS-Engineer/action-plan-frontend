@@ -22,6 +22,14 @@ export type IaAssistantMessage = {
 export type IaAssistantConversationState = {
   objective?: string | null;
   responsible_team?: string | null;
+  responsible_type?: "person" | "team" | "unknown" | null;
+  responsible_display_name?: string | null;
+  responsible_email?: string | null;
+  responsible_department?: string | null;
+  responsible_confidence?: number | null;
+  responsible_candidates?: IaAssistantResponsibleCandidate[];
+  pending_responsible_query?: string | null;
+  responsible_needs_confirmation?: boolean;
   deadline?: string | null;
   include_subactions?: boolean | null;
   include_monitoring?: boolean | null;
@@ -31,10 +39,22 @@ export type IaAssistantConversationState = {
   current_step?:
     | "objective"
     | "responsible_team"
+    | "responsible_confirmation"
     | "deadline"
     | "subactions"
     | "urgency"
     | "ready_to_create";
+};
+
+export type IaAssistantResponsibleCandidate = {
+  type?: "person" | "team" | "unknown";
+  display_name?: string | null;
+  email?: string | null;
+  department?: string | null;
+  job_title?: string | null;
+  site?: string | null;
+  confidence?: number;
+  reason?: string | null;
 };
 
 export const chatWithIaAssistant = async (payload: {
