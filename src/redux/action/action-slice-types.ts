@@ -19,6 +19,12 @@ export interface Action {
     description: string,
     priorite: number,
     email_responsable: string | null,
+    demandeur?: string | null,
+    email_demandeur?: string | null,
+    priority_index?: number | null,
+    importance?: string | null,
+    urgency?: string | null,
+    escalation_level?: number | null,
     ordre: number | null,
     created_at: string,
     closed_date: string | null
