@@ -47,6 +47,7 @@ const PRIORITY_COLORS = [COLORS.red, COLORS.orange, COLORS.amber, COLORS.green, 
 const scopeLabels: Record<string, string> = {
   my: "My Actions",
   team: "Team Actions",
+  all: "All Actions",
   global: "Global",
 };
 
@@ -104,8 +105,11 @@ export default function Dashboard() {
       return {};
     }
   }, []);
+  const isAdminUser = String(loggedUser?.role || "").trim().toLowerCase() === "admin";
 
-  const [scope, setScope] = useState<"my" | "team" | "global">("my");
+  const [scope, setScope] = useState<"my" | "team" | "all">(
+    isAdminUser ? "all" : "my"
+  );
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -144,7 +148,13 @@ export default function Dashboard() {
     fetchDashboard();
   }, [scope]);
 
-  const supportedScopes = data?.supported_scopes || ["my", "team", "global"];
+  useEffect(() => {
+    if (!isAdminUser && scope === "all") {
+      setScope("my");
+    }
+  }, [isAdminUser, scope]);
+
+  const supportedScopes = data?.supported_scopes || ["my", "team"];
 
   const openDrilldown = async (chart: string, bucket: string) => {
     if (!chart || !bucket) return;
@@ -226,7 +236,10 @@ export default function Dashboard() {
         <div>
           <p className="dashboard-eyebrow">Executive overview</p>
           <h1>Action Plan Dashboard</h1>
-          <span>{loggedUser?.full_name || loggedUser?.email || "Current user"}</span>
+          <span>
+            {loggedUser?.full_name || loggedUser?.email || "Current user"}
+            {isAdminUser && <span className="dashboard-admin-badge">Admin</span>}
+          </span>
         </div>
 
         <div className="dashboard-header-actions">
@@ -249,7 +262,7 @@ export default function Dashboard() {
 
       <section className="dashboard-toolbar">
         <div className="dashboard-scope-tabs" aria-label="Dashboard scope">
-          {(["my", "team", "global"] as const)
+          {(["my", "team", "all"] as const)
             .filter((item) => supportedScopes.includes(item))
             .map((item) => (
               <button
@@ -532,6 +545,7 @@ function DrilldownModal({ drilldown, onClose }: any) {
                   <th>Topic</th>
                   <th>Action</th>
                   <th>Responsible</th>
+                  <th>Requester</th>
                   <th>Due date</th>
                   <th>Status</th>
                   <th>Urgency</th>
@@ -552,6 +566,12 @@ function DrilldownModal({ drilldown, onClose }: any) {
                       <div className="drilldown-person">
                         <strong>{formatEmpty(action.responsable)}</strong>
                         <span>{formatEmpty(action.email_responsable)}</span>
+                      </div>
+                    </td>
+                    <td>
+                      <div className="drilldown-person">
+                        <strong>{formatEmpty(action.demandeur)}</strong>
+                        <span>{formatEmpty(action.email_demandeur)}</span>
                       </div>
                     </td>
                     <td>{formatEmpty(action.due_date)}</td>

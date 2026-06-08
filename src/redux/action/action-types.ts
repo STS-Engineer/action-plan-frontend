@@ -5,7 +5,7 @@ export type GetActionsBySujet = (
     sujet_id: number,
     options?: {
         email?: string | null,
-        scope?: "my" | "team" | "requested_by_me",
+        scope?: "my" | "team" | "requested_by_me" | "all",
         status?: string | null,
     },
 ) => Promise<boolean>;

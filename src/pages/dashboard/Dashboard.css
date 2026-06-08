@@ -54,6 +54,20 @@
   font-weight: 700;
 }
 
+.dashboard-admin-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 8px;
+  border: 1px solid #bfdbfe;
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
 .dashboard-header-actions {
   display: flex;
   align-items: center;

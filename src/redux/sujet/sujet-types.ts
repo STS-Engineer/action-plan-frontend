@@ -8,13 +8,13 @@ export type GetSujetsRacineListRequestAction = (
     dispatch: Dispatch<any>,
     email: string | null,
     status?: string | null,
-    scope?: "my" | "team" | "requested_by_me",
+    scope?: "my" | "team" | "requested_by_me" | "all",
 ) => Promise<boolean>;
 
 export type GetHomeSummaryRequestAction = (
     dispatch: Dispatch<any>,
     email: string,
-    scope: "my" | "team" | "requested_by_me",
+    scope: "my" | "team" | "requested_by_me" | "all",
 ) => Promise<boolean>;
 
 export type Statistique = (
@@ -26,7 +26,7 @@ export type GetSujetSousSujetsListRequestAction = (
     sujet_id: number,
     options?: {
         email?: string | null,
-        scope?: "my" | "team" | "requested_by_me",
+        scope?: "my" | "team" | "requested_by_me" | "all",
         status?: string | null,
     },
 ) => Promise<boolean>;

@@ -81,6 +81,7 @@ export const FlatFilteredActionsTable = ({
   onActionDeleted,
   currentUserEmail,
   viewMode,
+  showRequester = false,
 }) => {
   const visibleActions = (actions || []).filter((action) =>
     actionMatchesFlatKpiFilter(action, filter)
@@ -112,6 +113,7 @@ export const FlatFilteredActionsTable = ({
             <th>Action title</th>
             <th>Description</th>
             <th>Responsible</th>
+            {showRequester && <th>Requester</th>}
             <th>Due date</th>
             <th>Status</th>
             <th>Last comment</th>
@@ -138,6 +140,14 @@ export const FlatFilteredActionsTable = ({
               <td className="action-table-title">{action.titre || "-"}</td>
               <td>{action.description || "-"}</td>
               <td>{action.responsable || "-"}</td>
+              {showRequester && (
+                <td>
+                  <div className="person-cell">
+                    <strong>{action.demandeur || "-"}</strong>
+                    <span>{action.email_demandeur || ""}</span>
+                  </div>
+                </td>
+              )}
               <td>{formatDate(action.due_date)}</td>
               <td>
                 <StatusBadge

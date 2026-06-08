@@ -148,7 +148,7 @@ export const smartSearchActions = async (
     query: string,
     options?: {
         email?: string | null;
-        scope?: "my" | "team" | "requested_by_me";
+        scope?: "my" | "team" | "requested_by_me" | "all";
         scopedOnly?: boolean;
     }
 ) => {
@@ -180,7 +180,7 @@ export const smartSearchActions = async (
 
 export const getFilteredActions = async (options: {
     email?: string | null;
-    scope: "my" | "team" | "requested_by_me";
+    scope: "my" | "team" | "requested_by_me" | "all";
     status: "overdue" | "closed" | "in_progress" | "blocked" | "all";
 }) => {
     if (!options.email) {

@@ -24,7 +24,7 @@ import { clearAuthTokens } from '../../services/axiosInstance';
 
 const normalizeEmail = (value?: string | null) => value?.trim().toLowerCase() || null;
 type KpiFilter = "closed" | "in_progress" | "overdue" | "blocked";
-type HomeScope = "my" | "team" | "requested_by_me";
+type HomeScope = "my" | "team" | "requested_by_me" | "all";
 type AiCreatedPlanFocus = {
   rootSujetId: number | string | null;
   sujetIds: Array<number | string>;
@@ -69,6 +69,7 @@ const Home = () => {
   });
   const loggedUser = JSON.parse(localStorage.getItem("user") || "{}");
   const loggedUserEmail = normalizeEmail(loggedUser?.email);
+  const isAdminUser = String(loggedUser?.role || "").trim().toLowerCase() === "admin";
   const hasUnresolvedDeepLink = Boolean(targetActionId) && !deepLinkMessage && !accessDeniedMessage;
 
   const [email, setEmail] = useState<string | null>(loggedUser?.email || null);
@@ -203,6 +204,12 @@ const handleLogout = () => {
     await fetchData();
   };
 
+  useEffect(() => {
+    if (!isAdminUser && viewMode === "all") {
+      setViewMode("my");
+    }
+  }, [isAdminUser, viewMode]);
+
   const handleForceExpandConsumed = useCallback((sujetId: number | string) => {
     setAiCreatedPlanFocus((current) => {
       if (!current) return current;
@@ -325,6 +332,8 @@ const handleLogout = () => {
 
         const nextScope: HomeScope = access.scope === 'team'
           ? 'team'
+          : access.scope === 'global' || access.scope === 'all'
+            ? (isAdminUser ? 'all' : 'my')
           : access.scope === 'requester' || access.scope === 'requested_by_me'
             ? 'requested_by_me'
             : 'my';
@@ -350,7 +359,7 @@ const handleLogout = () => {
     };
 
     loadDeepLinkedAction();
-  }, [targetActionId, loggedUserEmail]);
+  }, [targetActionId, loggedUserEmail, isAdminUser]);
 
   useEffect(() => {
   const runSmartSearch = async () => {
@@ -507,6 +516,7 @@ const handleLogout = () => {
         <div className="top-actions">
           <span className="logged-user">
             {loggedUser?.full_name || loggedUser?.email}
+            {isAdminUser && <span className="admin-role-badge">Admin</span>}
           </span>
 
           <a href="/dashboard" className="dashboard-link">
@@ -544,6 +554,15 @@ const handleLogout = () => {
             >
               Requested by Me
             </button>
+
+            {isAdminUser && (
+              <button
+                className={viewMode === "all" ? "view-tab active" : "view-tab"}
+                onClick={() => setViewMode("all")}
+              >
+                All Actions
+              </button>
+            )}
           </div>
 
           <div className="home-toolbar-right">
@@ -771,6 +790,7 @@ const handleLogout = () => {
                 <th>Action</th>
                 <th>Description</th>
                 <th>Responsable</th>
+                {isAdminUser && <th>Requester</th>}
                 <th>Due date</th>
                 <th>Application</th>
                 <th>Status</th>
@@ -800,6 +820,15 @@ const handleLogout = () => {
       <td>{action.description || '—'}</td>
 
       <td>{action.responsable || '—'}</td>
+
+      {isAdminUser && (
+        <td>
+          <div className="person-cell">
+            <strong>{action.demandeur || '—'}</strong>
+            <span>{action.email_demandeur || ''}</span>
+          </div>
+        </td>
+      )}
 
       <td>{action.due_date || '—'}</td>
 
@@ -892,6 +921,7 @@ const handleLogout = () => {
       onActionDeleted={handleActionDeleted}
       currentUserEmail={loggedUserEmail}
       viewMode={viewMode}
+      showRequester={isAdminUser}
     />
   </>
 )}
