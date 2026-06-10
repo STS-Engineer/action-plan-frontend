@@ -24,6 +24,7 @@ import { clearAuthTokens } from '../../services/axiosInstance';
 
 const normalizeEmail = (value?: string | null) => value?.trim().toLowerCase() || null;
 type KpiFilter = "closed" | "in_progress" | "overdue" | "blocked";
+type KpiClickFilter = KpiFilter | "total";
 type HomeScope = "my" | "team" | "requested_by_me" | "all";
 type AiCreatedPlanFocus = {
   rootSujetId: number | string | null;
@@ -169,8 +170,12 @@ const handleLogout = () => {
     }
   };
 
-  const handleKpiClick = (filter: KpiFilter | null) => {
-    if (!filter) {
+  const handleKpiClick = (filter: KpiClickFilter) => {
+    setSearchTerm('');
+    setSmartResults([]);
+    setSmartSearchLoading(false);
+
+    if (filter === "total") {
       setSelectedKpiFilter(null);
       return;
     }
@@ -571,11 +576,11 @@ const handleLogout = () => {
                 <button
                   type="button"
                   className={`stat-card stat-card-blue ${!selectedKpiFilter ? "active-filter-card" : ""}`}
-                  onClick={() => handleKpiClick(null)}
+                  onClick={() => handleKpiClick("total")}
                 >
                   <div className="stat-card-content">
                     <div>
-                      <p className="stat-label">Total</p>
+                      <p className="stat-label">Total Topics</p>
                       <p className="stat-value">{homeSummary.total_sujets}</p>
                     </div>
                     <Folder size={18} className="stat-icon" />
@@ -771,7 +776,7 @@ const handleLogout = () => {
             </div>
           )}
 
-          {searchTerm.trim() && (
+          {!selectedKpiFilter && searchTerm.trim() && (
   <div className="smart-search-results">
     <h2 className="main-title">
       <Search className="main-title-icon" size={28} />
@@ -903,7 +908,7 @@ const handleLogout = () => {
     )}
   </div>
 )}
-         {!searchTerm.trim() && selectedKpiFilter && (
+         {selectedKpiFilter && (
   <>
     <h2 className="main-title">
       <FolderOpen className="main-title-icon" size={32} />
