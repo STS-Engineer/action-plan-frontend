@@ -829,6 +829,10 @@ body {
   min-width: 1500px;
 }
 
+.kpi-filtered-section + .kpi-filtered-section {
+  margin-top: 2rem;
+}
+
 .topic-path-cell {
   max-width: 260px;
   color: var(--gray-700);

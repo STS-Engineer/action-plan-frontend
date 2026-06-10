@@ -38,6 +38,28 @@ const KPI_FILTER_LABELS: Record<KpiFilter, string> = {
   overdue: "Overdue",
   blocked: "Blocked",
 };
+const KPI_FILTER_ORDER: KpiFilter[] = ["overdue", "blocked", "in_progress", "closed"];
+
+const createEmptyActionsByKpi = (): Record<KpiFilter, any[]> => ({
+  overdue: [],
+  blocked: [],
+  in_progress: [],
+  closed: [],
+});
+
+const createLoadingByKpi = (value = false): Record<KpiFilter, boolean> => ({
+  overdue: value,
+  blocked: value,
+  in_progress: value,
+  closed: value,
+});
+
+const createEmptyErrorsByKpi = (): Record<KpiFilter, string | null> => ({
+  overdue: null,
+  blocked: null,
+  in_progress: null,
+  closed: null,
+});
 
 const Home = () => {
   const dispatch = useDispatch();
@@ -52,10 +74,16 @@ const Home = () => {
   const [smartResults, setSmartResults] = useState<any[]>([]);
   const [smartSearchLoading, setSmartSearchLoading] = useState(false);
   const [viewMode, setViewMode] = useState<HomeScope>("my");
-  const [selectedKpiFilter, setSelectedKpiFilter] = useState<KpiFilter | null>(null);
-  const [filteredActions, setFilteredActions] = useState<any[]>([]);
-  const [filteredActionsLoading, setFilteredActionsLoading] = useState(false);
-  const [filteredActionsError, setFilteredActionsError] = useState<string | null>(null);
+  const [selectedKpiFilters, setSelectedKpiFilters] = useState<KpiFilter[]>([]);
+  const [filteredActionsByKpi, setFilteredActionsByKpi] = useState<Record<KpiFilter, any[]>>(
+    createEmptyActionsByKpi
+  );
+  const [loadingByKpi, setLoadingByKpi] = useState<Record<KpiFilter, boolean>>(
+    () => createLoadingByKpi(false)
+  );
+  const [errorByKpi, setErrorByKpi] = useState<Record<KpiFilter, string | null>>(
+    createEmptyErrorsByKpi
+  );
   const [historyAction, setHistoryAction] = useState<any | null>(null);
   const [deepLinkedAction, setDeepLinkedAction] = useState<any | null>(null);
   const [deepLinkMessage, setDeepLinkMessage] = useState<string | null>(null);
@@ -92,7 +120,7 @@ const handleLogout = () => {
   const viewDeepLinkedAction = () => {
     if (!targetActionId && !deepLinkedAction) return;
 
-    setSelectedKpiFilter(null);
+    setSelectedKpiFilters([]);
     setSearchTerm(deepLinkedAction?.titre || String(targetActionId));
 
     window.setTimeout(() => {
@@ -141,33 +169,42 @@ const handleLogout = () => {
     }
   };
 
-  const fetchFilteredActions = async () => {
-    if (!selectedKpiFilter || !loggedUserEmail || hasUnresolvedDeepLink) {
-      setFilteredActions([]);
-      setFilteredActionsError(null);
-      setFilteredActionsLoading(false);
+  const fetchFilteredActionsForKpi = async (filter: KpiFilter) => {
+    if (!loggedUserEmail || hasUnresolvedDeepLink) {
+      setFilteredActionsByKpi((current) => ({ ...current, [filter]: [] }));
+      setErrorByKpi((current) => ({ ...current, [filter]: null }));
+      setLoadingByKpi((current) => ({ ...current, [filter]: false }));
       return;
     }
 
     try {
-      setFilteredActionsLoading(true);
-      setFilteredActionsError(null);
+      setLoadingByKpi((current) => ({ ...current, [filter]: true }));
+      setErrorByKpi((current) => ({ ...current, [filter]: null }));
 
       const actions = await getFilteredActions({
         email: loggedUserEmail,
         scope: viewMode,
-        status: selectedKpiFilter,
+        status: filter,
       });
 
-      setFilteredActions(actions || []);
+      setFilteredActionsByKpi((current) => ({ ...current, [filter]: actions || [] }));
     } catch (err: any) {
-      setFilteredActions([]);
-      setFilteredActionsError(
-        err?.response?.data?.detail || err?.message || "Unable to load filtered actions."
-      );
+      setFilteredActionsByKpi((current) => ({ ...current, [filter]: [] }));
+      setErrorByKpi((current) => ({
+        ...current,
+        [filter]: err?.response?.data?.detail || err?.message || "Unable to load filtered actions.",
+      }));
     } finally {
-      setFilteredActionsLoading(false);
+      setLoadingByKpi((current) => ({ ...current, [filter]: false }));
     }
+  };
+
+  const fetchSelectedKpiActions = async (filters = selectedKpiFilters) => {
+    if (!filters.length || !loggedUserEmail || hasUnresolvedDeepLink) {
+      return;
+    }
+
+    await Promise.all(filters.map((filter) => fetchFilteredActionsForKpi(filter)));
   };
 
   const handleKpiClick = (filter: KpiClickFilter) => {
@@ -176,11 +213,15 @@ const handleLogout = () => {
     setSmartSearchLoading(false);
 
     if (filter === "total") {
-      setSelectedKpiFilter(null);
+      setSelectedKpiFilters([]);
       return;
     }
 
-    setSelectedKpiFilter((current) => current === filter ? null : filter);
+    setSelectedKpiFilters((current) =>
+      current.includes(filter)
+        ? current.filter((selectedFilter) => selectedFilter !== filter)
+        : [...current, filter]
+    );
   };
 
   const handleAiPlanCreated = async (result: any, draft: any) => {
@@ -193,7 +234,7 @@ const handleLogout = () => {
     ];
     const firstActionId = result?.created_action_ids?.[0] || null;
 
-    setSelectedKpiFilter(null);
+    setSelectedKpiFilters([]);
     setSearchTerm('');
     setSmartResults([]);
     setDeepLinkedAction(null);
@@ -237,7 +278,7 @@ const handleLogout = () => {
   const refreshAfterStatusChange = async (options?: { refreshSmartSearch?: boolean }) => {
     await Promise.all([
       fetchData(),
-      selectedKpiFilter ? fetchFilteredActions() : Promise.resolve(),
+      selectedKpiFilters.length ? fetchSelectedKpiActions() : Promise.resolve(),
       options?.refreshSmartSearch && searchTerm.trim()
         ? smartSearchActions(searchTerm, {
             email: loggedUserEmail,
@@ -262,13 +303,21 @@ const handleLogout = () => {
     setSmartResults((current) =>
       current.filter((action: any) => !deletedIds.has(String(action.id)))
     );
-    setFilteredActions((current) =>
-      current.filter((action: any) => !deletedIds.has(String(action.id)))
-    );
+    setFilteredActionsByKpi((current) => {
+      const next = { ...current };
+
+      KPI_FILTER_ORDER.forEach((filter) => {
+        next[filter] = (next[filter] || []).filter(
+          (action: any) => !deletedIds.has(String(action.id))
+        );
+      });
+
+      return next;
+    });
 
     await Promise.all([
       fetchData(),
-      fetchFilteredActions(),
+      selectedKpiFilters.length ? fetchSelectedKpiActions() : Promise.resolve(),
     ]);
   };
 
@@ -286,11 +335,11 @@ const handleLogout = () => {
   ]);
 
   useEffect(() => {
-    fetchFilteredActions();
+    fetchSelectedKpiActions();
   }, [
     hasUnresolvedDeepLink,
     loggedUserEmail,
-    selectedKpiFilter,
+    selectedKpiFilters,
     viewMode,
   ]);
 
@@ -318,7 +367,7 @@ const handleLogout = () => {
       }
 
       try {
-        setSelectedKpiFilter(null);
+        setSelectedKpiFilters([]);
         setSearchTerm('');
         setSmartResults([]);
         setDeepLinkedAction(null);
@@ -426,19 +475,25 @@ const handleLogout = () => {
         return false;
       }
 
-      if (!actionMatchesFlatKpiFilter(action, selectedKpiFilter)) {
-        return false;
-      }
-
       return true;
     });
-  }, [smartResultsWithDeepLink, selectedKpiFilter, targetActionId]);
+  }, [smartResultsWithDeepLink, targetActionId]);
 
-  const visibleFilteredActions = useMemo(() => {
-    return filteredActions.filter((action: any) =>
-      actionMatchesFlatKpiFilter(action, selectedKpiFilter)
-    );
-  }, [filteredActions, selectedKpiFilter]);
+  const activeKpiFilters = useMemo(() => {
+    return KPI_FILTER_ORDER.filter((filter) => selectedKpiFilters.includes(filter));
+  }, [selectedKpiFilters]);
+
+  const visibleFilteredActionsByKpi = useMemo(() => {
+    const visibleActions = createEmptyActionsByKpi();
+
+    KPI_FILTER_ORDER.forEach((filter) => {
+      visibleActions[filter] = (filteredActionsByKpi[filter] || []).filter((action: any) =>
+        actionMatchesFlatKpiFilter(action, filter)
+      );
+    });
+
+    return visibleActions;
+  }, [filteredActionsByKpi]);
 
   useEffect(() => {
     if (!targetActionId || smartSearchLoading) return;
@@ -575,7 +630,7 @@ const handleLogout = () => {
               <div className="toolbar-kpis" aria-label="Action filters">
                 <button
                   type="button"
-                  className={`stat-card stat-card-blue ${!selectedKpiFilter ? "active-filter-card" : ""}`}
+                  className={`stat-card stat-card-blue ${selectedKpiFilters.length === 0 ? "active-filter-card" : ""}`}
                   onClick={() => handleKpiClick("total")}
                 >
                   <div className="stat-card-content">
@@ -589,7 +644,7 @@ const handleLogout = () => {
 
                 <button
                   type="button"
-                  className={`stat-card stat-card-green ${selectedKpiFilter === "closed" ? "active-filter-card" : ""}`}
+                  className={`stat-card stat-card-green ${selectedKpiFilters.includes("closed") ? "active-filter-card" : ""}`}
                   onClick={() => handleKpiClick("closed")}
                 >
                   <div className="stat-card-content">
@@ -603,7 +658,7 @@ const handleLogout = () => {
 
                 <button
                   type="button"
-                  className={`stat-card stat-card-orange ${selectedKpiFilter === "in_progress" ? "active-filter-card" : ""}`}
+                  className={`stat-card stat-card-orange ${selectedKpiFilters.includes("in_progress") ? "active-filter-card" : ""}`}
                   onClick={() => handleKpiClick("in_progress")}
                 >
                   <div className="stat-card-content">
@@ -617,7 +672,7 @@ const handleLogout = () => {
 
                 <button
                   type="button"
-                  className={`stat-card stat-card-red ${selectedKpiFilter === "overdue" ? "active-filter-card" : ""}`}
+                  className={`stat-card stat-card-red ${selectedKpiFilters.includes("overdue") ? "active-filter-card" : ""}`}
                   onClick={() => handleKpiClick("overdue")}
                 >
                   <div className="stat-card-content">
@@ -631,7 +686,7 @@ const handleLogout = () => {
 
                 <button
                   type="button"
-                  className={`stat-card stat-card-blocked ${selectedKpiFilter === "blocked" ? "active-filter-card" : ""}`}
+                  className={`stat-card stat-card-blocked ${selectedKpiFilters.includes("blocked") ? "active-filter-card" : ""}`}
                   onClick={() => handleKpiClick("blocked")}
                 >
                   <div className="stat-card-content">
@@ -664,7 +719,14 @@ const handleLogout = () => {
               className="search-input"
               placeholder="Search by topic, action, owner…"
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                const nextValue = e.target.value;
+                setSearchTerm(nextValue);
+
+                if (nextValue.trim()) {
+                  setSelectedKpiFilters([]);
+                }
+              }}
             />
           </div>
           <div style={{ flex: 1, maxWidth: 360 }}>
@@ -776,7 +838,7 @@ const handleLogout = () => {
             </div>
           )}
 
-          {!selectedKpiFilter && searchTerm.trim() && (
+          {selectedKpiFilters.length === 0 && searchTerm.trim() && (
   <div className="smart-search-results">
     <h2 className="main-title">
       <Search className="main-title-icon" size={28} />
@@ -908,19 +970,21 @@ const handleLogout = () => {
     )}
   </div>
 )}
-         {selectedKpiFilter && (
-  <>
+         {activeKpiFilters.length > 0 && (
+  <div className="kpi-filtered-sections">
+    {activeKpiFilters.map((filter) => (
+      <section className="kpi-filtered-section" key={filter}>
     <h2 className="main-title">
       <FolderOpen className="main-title-icon" size={32} />
-      {KPI_FILTER_LABELS[selectedKpiFilter]} actions
-      <span className="main-title-count">({visibleFilteredActions.length})</span>
+      {KPI_FILTER_LABELS[filter]} actions
+      <span className="main-title-count">({visibleFilteredActionsByKpi[filter].length})</span>
     </h2>
 
     <FlatFilteredActionsTable
-      actions={filteredActions}
-      loading={filteredActionsLoading}
-      error={filteredActionsError}
-      filter={selectedKpiFilter}
+      actions={filteredActionsByKpi[filter]}
+      loading={loadingByKpi[filter]}
+      error={errorByKpi[filter]}
+      filter={filter}
       onOpenHistory={setHistoryAction}
       onStatusChange={handleFlatStatusChange}
       onActionDeleted={handleActionDeleted}
@@ -928,9 +992,11 @@ const handleLogout = () => {
       viewMode={viewMode}
       showRequester={isAdminUser}
     />
-  </>
+      </section>
+    ))}
+  </div>
 )}
-         {!searchTerm.trim() && !selectedKpiFilter && (
+         {!searchTerm.trim() && activeKpiFilters.length === 0 && (
   <>
     <h2 className="main-title">
       <FolderOpen className="main-title-icon" size={32} />
