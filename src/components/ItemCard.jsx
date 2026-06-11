@@ -456,7 +456,7 @@ export const ItemCard = (props) => {
               <th>Action</th>
               <th>Description</th>
               <th>Responsable</th>
-              {viewMode === 'all' && <th>Requester</th>}
+              <th>Requester</th>
               <th>Due date</th>
               <th>Application</th>
               <th>Status</th>
@@ -487,14 +487,12 @@ export const ItemCard = (props) => {
 
   <td>{child.responsable || '—'}</td>
 
-  {viewMode === 'all' && (
-    <td>
-      <div className="person-cell">
-        <strong>{child.demandeur || '—'}</strong>
-        <span>{child.email_demandeur || ''}</span>
-      </div>
-    </td>
-  )}
+  <td>
+    <div className="person-cell">
+      <strong>{child.demandeur || '—'}</strong>
+      <span>{child.email_demandeur || ''}</span>
+    </div>
+  </td>
 
   <td>
     {child.due_date

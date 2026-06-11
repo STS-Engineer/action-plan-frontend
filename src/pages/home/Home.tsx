@@ -857,7 +857,7 @@ const handleLogout = () => {
                 <th>Action</th>
                 <th>Description</th>
                 <th>Responsable</th>
-                {isAdminUser && <th>Requester</th>}
+                <th>Requester</th>
                 <th>Due date</th>
                 <th>Application</th>
                 <th>Status</th>
@@ -888,14 +888,12 @@ const handleLogout = () => {
 
       <td>{action.responsable || '—'}</td>
 
-      {isAdminUser && (
-        <td>
-          <div className="person-cell">
-            <strong>{action.demandeur || '—'}</strong>
-            <span>{action.email_demandeur || ''}</span>
-          </div>
-        </td>
-      )}
+      <td>
+        <div className="person-cell">
+          <strong>{action.demandeur || '—'}</strong>
+          <span>{action.email_demandeur || ''}</span>
+        </div>
+      </td>
 
       <td>{action.due_date || '—'}</td>
 
@@ -990,7 +988,7 @@ const handleLogout = () => {
       onActionDeleted={handleActionDeleted}
       currentUserEmail={loggedUserEmail}
       viewMode={viewMode}
-      showRequester={isAdminUser}
+      showRequester={true}
     />
       </section>
     ))}
