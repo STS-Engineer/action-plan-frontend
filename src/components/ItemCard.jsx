@@ -22,6 +22,12 @@ import { getActionHomeStatusBucket } from '../utils/actionHomeStatus';
 import { ActionHistoryModal } from './ActionHistoryModal';
 import { ActionLatestHistoryCells } from './ActionLatestHistoryCells';
 import { ActionDeleteButton } from './ActionDeleteButton';
+import {
+  ActionTableFilterControl,
+  createEmptyActionColumnFilters,
+  filterActionsByColumnFilters,
+  hasActiveActionColumnFilters,
+} from './ActionTableFilters';
 
 const SUJET_LABELS = ['Topic', 'Subtopic', 'Sub-subtopic', 'Nested subtopic'];
 const ACTION_LABELS = ['Action', 'Sub-action', 'Sub-sub-action', 'Nested action'];
@@ -54,6 +60,7 @@ export const ItemCard = (props) => {
   const [localStatus, setLocalStatus] = useState(item.status);
   const [menuOpen, setMenuOpen] = useState(false);
   const [historyAction, setHistoryAction] = useState(null);
+  const [actionColumnFilters, setActionColumnFilters] = useState(createEmptyActionColumnFilters);
 
   const isSujet = type === 'sujet';
   const isAction = type === 'action';
@@ -147,6 +154,14 @@ export const ItemCard = (props) => {
       return true;
     });
   }, [children, statusFilter]);
+  const visibleActionChildren = useMemo(
+    () => filterActionsByColumnFilters(actionChildren, actionColumnFilters),
+    [actionChildren, actionColumnFilters],
+  );
+  const updateActionColumnFilter = (field, value) => {
+    setActionColumnFilters((current) => ({ ...current, [field]: value }));
+  };
+  const clearActionColumnFilters = () => setActionColumnFilters(createEmptyActionColumnFilters());
 
   const onStatusChange = async (actionId, newStatus, options) => {
     const result = await updateActionStatus(dispatch, actionId, newStatus, options);
@@ -274,7 +289,7 @@ export const ItemCard = (props) => {
                 {isSujet && (
                   <>
                     <h3 className="item-title">{item.titre}</h3>
-                    {item.description && <p className="item-description">{item.description}</p>}
+                    {item.description && <p className="item-description" title={item.description}>{item.description}</p>}
                   </>
                 )}
 
@@ -333,7 +348,7 @@ export const ItemCard = (props) => {
                     </div>
                     <span className="action-title">{item.titre}</span>
 
-                    {item.description && <div className="action-desc">{item.description}</div>}
+                    {item.description && <div className="action-desc" title={item.description}>{item.description}</div>}
 
                     <div className="item-meta">
                       <div className="meta-item">
@@ -445,7 +460,7 @@ export const ItemCard = (props) => {
       style={sujetChildren.length > 0 ? { marginTop: '1rem' } : {}}
     >
       <ChevronRight size={16} />
-      {getLabel(ACTION_LABELS, actionDepth)} ({actionChildren.length})
+      {getLabel(ACTION_LABELS, actionDepth)} ({visibleActionChildren.length})
     </h5>
 
     <div className="actions-table-wrapper">
@@ -454,24 +469,101 @@ export const ItemCard = (props) => {
              <tr>
               <th>Priority</th>
               <th>Action</th>
-              <th>Description</th>
+              <th className="description-column">Description</th>
               <th>Responsable</th>
               <th>Requester</th>
               <th>Due date</th>
               <th>Application</th>
               <th>Status</th>
+              <th>Urgency</th>
+              <th>Importance</th>
               <th>Last comment</th>
               <th>Fichier joint</th>
               <th>History</th>
               <th>Delete</th>
 </tr>
+             <tr className="action-table-filter-row">
+              <th>
+                <ActionTableFilterControl
+                  field="priority_index"
+                  filters={actionColumnFilters}
+                  onChange={updateActionColumnFilter}
+                  placeholder="#"
+                />
+              </th>
+              <th />
+              <th className="description-column" />
+              <th>
+                <ActionTableFilterControl
+                  field="responsable"
+                  filters={actionColumnFilters}
+                  onChange={updateActionColumnFilter}
+                  placeholder="Responsible"
+                />
+              </th>
+              <th>
+                <ActionTableFilterControl
+                  field="demandeur"
+                  filters={actionColumnFilters}
+                  onChange={updateActionColumnFilter}
+                  placeholder="Requester"
+                />
+              </th>
+              <th>
+                <ActionTableFilterControl
+                  field="due_date"
+                  filters={actionColumnFilters}
+                  onChange={updateActionColumnFilter}
+                />
+              </th>
+              <th />
+              <th>
+                <ActionTableFilterControl
+                  field="status"
+                  filters={actionColumnFilters}
+                  onChange={updateActionColumnFilter}
+                />
+              </th>
+              <th>
+                <ActionTableFilterControl
+                  field="urgency"
+                  filters={actionColumnFilters}
+                  onChange={updateActionColumnFilter}
+                />
+              </th>
+              <th>
+                <ActionTableFilterControl
+                  field="importance"
+                  filters={actionColumnFilters}
+                  onChange={updateActionColumnFilter}
+                />
+              </th>
+              <th />
+              <th />
+              <th />
+              <th>
+                {hasActiveActionColumnFilters(actionColumnFilters) && (
+                  <button type="button" className="table-filter-clear" onClick={clearActionColumnFilters}>
+                    Clear
+                  </button>
+                )}
+              </th>
+            </tr>
         </thead>
 
         <tbody>
-          {actionChildren.map((child) => (
+          {visibleActionChildren.length === 0 && (
+            <tr>
+              <td colSpan={14} className="empty-filter-row">
+                No actions match these column filters.
+              </td>
+            </tr>
+          )}
+          {visibleActionChildren.map((child) => (
            <tr
             key={`${child.itemType}-${child.id}`}
             data-action-id={child.id}
+            title={child.description || ''}
             className={String(child.id) === String(effectiveTargetActionId) ? 'deep-linked-action-row' : ''}
            >
   <td>
@@ -532,6 +624,8 @@ export const ItemCard = (props) => {
       onMenuToggle={setMenuOpen}
     />
   </td>
+  <td>{child.urgency || '—'}</td>
+  <td>{child.importance || '—'}</td>
   <ActionLatestHistoryCells action={child} />
   <td className="history-cell">
     <button

@@ -1,8 +1,15 @@
 import { History } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { StatusBadge } from "./StatusBadge";
 import { ActionLatestHistoryCells } from "./ActionLatestHistoryCells";
 import { getActionHomeStatusBucket } from "../utils/actionHomeStatus";
 import { ActionDeleteButton } from "./ActionDeleteButton";
+import {
+  ActionTableFilterControl,
+  createEmptyActionColumnFilters,
+  filterActionsByColumnFilters,
+  hasActiveActionColumnFilters,
+} from "./ActionTableFilters";
 
 const formatDate = (value) => {
   if (!value) return "-";
@@ -82,10 +89,25 @@ export const FlatFilteredActionsTable = ({
   currentUserEmail,
   viewMode,
   showRequester = false,
+  onVisibleCountChange,
 }) => {
-  const visibleActions = (actions || []).filter((action) =>
-    actionMatchesFlatKpiFilter(action, filter)
+  const [columnFilters, setColumnFilters] = useState(createEmptyActionColumnFilters);
+  const kpiMatchedActions = useMemo(
+    () => (actions || []).filter((action) => actionMatchesFlatKpiFilter(action, filter)),
+    [actions, filter]
   );
+  const visibleActions = useMemo(
+    () => filterActionsByColumnFilters(kpiMatchedActions, columnFilters),
+    [kpiMatchedActions, columnFilters]
+  );
+  const updateColumnFilter = (field, value) => {
+    setColumnFilters((current) => ({ ...current, [field]: value }));
+  };
+  const clearColumnFilters = () => setColumnFilters(createEmptyActionColumnFilters());
+
+  useEffect(() => {
+    onVisibleCountChange?.(visibleActions.length);
+  }, [visibleActions.length]);
 
   if (loading) {
     return <p className="loading-text">Loading actions...</p>;
@@ -95,7 +117,7 @@ export const FlatFilteredActionsTable = ({
     return <div className="status-modal-error">{error}</div>;
   }
 
-  if (visibleActions.length === 0) {
+  if (kpiMatchedActions.length === 0) {
     return (
       <div className="empty-state">
         <p className="empty-text">No actions found for this filter.</p>
@@ -111,19 +133,97 @@ export const FlatFilteredActionsTable = ({
             <th>Priority</th>
             <th>Topic / Sujet</th>
             <th>Action title</th>
-            <th>Description</th>
+            <th className="description-column">Description</th>
             <th>Responsible</th>
             {showRequester && <th>Requester</th>}
             <th>Due date</th>
             <th>Status</th>
+            <th>Urgency</th>
+            <th>Importance</th>
             <th>Last comment</th>
             <th>Fichier joint</th>
             <th>History</th>
             <th>Delete</th>
           </tr>
+          <tr className="action-table-filter-row">
+            <th>
+              <ActionTableFilterControl
+                field="priority_index"
+                filters={columnFilters}
+                onChange={updateColumnFilter}
+                placeholder="#"
+              />
+            </th>
+            <th />
+            <th />
+            <th className="description-column" />
+            <th>
+              <ActionTableFilterControl
+                field="responsable"
+                filters={columnFilters}
+                onChange={updateColumnFilter}
+                placeholder="Responsible"
+              />
+            </th>
+            {showRequester && (
+              <th>
+                <ActionTableFilterControl
+                  field="demandeur"
+                  filters={columnFilters}
+                  onChange={updateColumnFilter}
+                  placeholder="Requester"
+                />
+              </th>
+            )}
+            <th>
+              <ActionTableFilterControl
+                field="due_date"
+                filters={columnFilters}
+                onChange={updateColumnFilter}
+              />
+            </th>
+            <th>
+              <ActionTableFilterControl
+                field="status"
+                filters={columnFilters}
+                onChange={updateColumnFilter}
+              />
+            </th>
+            <th>
+              <ActionTableFilterControl
+                field="urgency"
+                filters={columnFilters}
+                onChange={updateColumnFilter}
+              />
+            </th>
+            <th>
+              <ActionTableFilterControl
+                field="importance"
+                filters={columnFilters}
+                onChange={updateColumnFilter}
+              />
+            </th>
+            <th />
+            <th />
+            <th />
+            <th>
+              {hasActiveActionColumnFilters(columnFilters) && (
+                <button type="button" className="table-filter-clear" onClick={clearColumnFilters}>
+                  Clear
+                </button>
+              )}
+            </th>
+          </tr>
         </thead>
 
         <tbody>
+          {visibleActions.length === 0 && (
+            <tr>
+              <td colSpan={showRequester ? 14 : 13} className="empty-filter-row">
+                No actions match these column filters.
+              </td>
+            </tr>
+          )}
           {visibleActions.map((action) => (
             <tr key={action.id}>
               <td>
@@ -138,7 +238,11 @@ export const FlatFilteredActionsTable = ({
                   "-"}
               </td>
               <td className="action-table-title">{action.titre || "-"}</td>
-              <td>{action.description || "-"}</td>
+              <td className="description-column">
+                <span className="table-description-text" title={action.description || ""}>
+                  {action.description || "-"}
+                </span>
+              </td>
               <td>{action.responsable || "-"}</td>
               {showRequester && (
                 <td>
@@ -157,6 +261,8 @@ export const FlatFilteredActionsTable = ({
                   onStatusChange={onStatusChange}
                 />
               </td>
+              <td>{action.urgency || "-"}</td>
+              <td>{action.importance || "-"}</td>
               <ActionLatestHistoryCells action={action} />
               <td className="history-cell">
                 <button

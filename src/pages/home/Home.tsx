@@ -14,6 +14,12 @@ import {
   actionMatchesFlatKpiFilter,
   FlatFilteredActionsTable,
 } from '../../components/FlatFilteredActionsTable';
+import {
+  ActionTableFilterControl,
+  createEmptyActionColumnFilters,
+  filterActionsByColumnFilters,
+  hasActiveActionColumnFilters,
+} from '../../components/ActionTableFilters';
 import { getFilteredActions, updateActionStatus } from '../../redux/action/action';
 import { Sujet } from '../../redux/sujet/sujet-slice-types';
 import Select from 'react-select';
@@ -72,11 +78,15 @@ const Home = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [smartResults, setSmartResults] = useState<any[]>([]);
+  const [smartColumnFilters, setSmartColumnFilters] = useState(createEmptyActionColumnFilters);
   const [smartSearchLoading, setSmartSearchLoading] = useState(false);
   const [viewMode, setViewMode] = useState<HomeScope>("my");
   const [selectedKpiFilters, setSelectedKpiFilters] = useState<KpiFilter[]>([]);
   const [filteredActionsByKpi, setFilteredActionsByKpi] = useState<Record<KpiFilter, any[]>>(
     createEmptyActionsByKpi
+  );
+  const [visibleKpiCounts, setVisibleKpiCounts] = useState<Record<KpiFilter, number>>(
+    () => ({ overdue: 0, blocked: 0, in_progress: 0, closed: 0 })
   );
   const [loadingByKpi, setLoadingByKpi] = useState<Record<KpiFilter, boolean>>(
     () => createLoadingByKpi(false)
@@ -478,6 +488,13 @@ const handleLogout = () => {
       return true;
     });
   }, [smartResultsWithDeepLink, targetActionId]);
+  const visibleSmartResults = useMemo(() => {
+    return filterActionsByColumnFilters(filteredSmartResults, smartColumnFilters);
+  }, [filteredSmartResults, smartColumnFilters]);
+  const updateSmartColumnFilter = (field: string, value: string) => {
+    setSmartColumnFilters((current: any) => ({ ...current, [field]: value }));
+  };
+  const clearSmartColumnFilters = () => setSmartColumnFilters(createEmptyActionColumnFilters());
 
   const activeKpiFilters = useMemo(() => {
     return KPI_FILTER_ORDER.filter((filter) => selectedKpiFilters.includes(filter));
@@ -843,7 +860,7 @@ const handleLogout = () => {
     <h2 className="main-title">
       <Search className="main-title-icon" size={28} />
       Smart search results
-      <span className="main-title-count">({filteredSmartResults.length})</span>
+      <span className="main-title-count">({visibleSmartResults.length})</span>
     </h2>
 
     {smartSearchLoading ? (
@@ -855,21 +872,97 @@ const handleLogout = () => {
            <tr>
                 <th>Priority</th>
                 <th>Action</th>
-                <th>Description</th>
+                <th className="description-column">Description</th>
                 <th>Responsable</th>
                 <th>Requester</th>
                 <th>Due date</th>
                 <th>Application</th>
                 <th>Status</th>
+                <th>Urgency</th>
+                <th>Importance</th>
                 <th>Last comment</th>
                 <th>Fichier joint</th>
                 <th>History</th>
                 <th>Delete</th>
               </tr>
+              <tr className="action-table-filter-row">
+                <th>
+                  <ActionTableFilterControl
+                    field="priority_index"
+                    filters={smartColumnFilters}
+                    onChange={updateSmartColumnFilter}
+                    placeholder="#"
+                  />
+                </th>
+                <th />
+                <th className="description-column" />
+                <th>
+                  <ActionTableFilterControl
+                    field="responsable"
+                    filters={smartColumnFilters}
+                    onChange={updateSmartColumnFilter}
+                    placeholder="Responsible"
+                  />
+                </th>
+                <th>
+                  <ActionTableFilterControl
+                    field="demandeur"
+                    filters={smartColumnFilters}
+                    onChange={updateSmartColumnFilter}
+                    placeholder="Requester"
+                  />
+                </th>
+                <th>
+                  <ActionTableFilterControl
+                    field="due_date"
+                    filters={smartColumnFilters}
+                    onChange={updateSmartColumnFilter}
+                  />
+                </th>
+                <th />
+                <th>
+                  <ActionTableFilterControl
+                    field="status"
+                    filters={smartColumnFilters}
+                    onChange={updateSmartColumnFilter}
+                  />
+                </th>
+                <th>
+                  <ActionTableFilterControl
+                    field="urgency"
+                    filters={smartColumnFilters}
+                    onChange={updateSmartColumnFilter}
+                  />
+                </th>
+                <th>
+                  <ActionTableFilterControl
+                    field="importance"
+                    filters={smartColumnFilters}
+                    onChange={updateSmartColumnFilter}
+                  />
+                </th>
+                <th />
+                <th />
+                <th />
+                <th>
+                  {hasActiveActionColumnFilters(smartColumnFilters) && (
+                    <button type="button" className="table-filter-clear" onClick={clearSmartColumnFilters}>
+                      Clear
+                    </button>
+                  )}
+                </th>
+              </tr>
           </thead>
 
          <tbody>
-  {filteredSmartResults.map((action: any) => (
+  {visibleSmartResults.length === 0 && (
+    <tr>
+      <td colSpan={14} className="empty-filter-row">
+        No actions match these column filters.
+      </td>
+    </tr>
+  )}
+  {visibleSmartResults.map((action: any) => (
     <tr
       key={action.id}
       data-action-id={action.id}
@@ -884,7 +977,11 @@ const handleLogout = () => {
         {action.titre || '—'}
       </td>
 
-      <td>{action.description || '—'}</td>
+      <td className="description-column">
+        <span className="table-description-text" title={action.description || ''}>
+          {action.description || '—'}
+        </span>
+      </td>
 
       <td>{action.responsable || '—'}</td>
 
@@ -936,6 +1033,8 @@ const handleLogout = () => {
   }}
 />
       </td>
+      <td>{action.urgency || '—'}</td>
+      <td>{action.importance || '—'}</td>
       <ActionLatestHistoryCells action={action} />
       <td className="history-cell">
         <button
@@ -975,7 +1074,7 @@ const handleLogout = () => {
     <h2 className="main-title">
       <FolderOpen className="main-title-icon" size={32} />
       {KPI_FILTER_LABELS[filter]} actions
-      <span className="main-title-count">({visibleFilteredActionsByKpi[filter].length})</span>
+      <span className="main-title-count">({visibleKpiCounts[filter] ?? visibleFilteredActionsByKpi[filter].length})</span>
     </h2>
 
     <FlatFilteredActionsTable
@@ -989,6 +1088,9 @@ const handleLogout = () => {
       currentUserEmail={loggedUserEmail}
       viewMode={viewMode}
       showRequester={true}
+      onVisibleCountChange={(count: number) => {
+        setVisibleKpiCounts((current) => ({ ...current, [filter]: count }));
+      }}
     />
       </section>
     ))}
