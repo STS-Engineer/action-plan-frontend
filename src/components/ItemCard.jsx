@@ -28,7 +28,7 @@ import {
   filterActionsByColumnFilters,
   hasActiveActionColumnFilters,
 } from './ActionTableFilters';
-
+import DescriptionCell from "./DescriptionCell";
 const SUJET_LABELS = ['Topic', 'Subtopic', 'Sub-subtopic', 'Nested subtopic'];
 const ACTION_LABELS = ['Action', 'Sub-action', 'Sub-sub-action', 'Nested action'];
 
@@ -574,8 +574,10 @@ export const ItemCard = (props) => {
   <td className="action-table-title">
     {child.titre || '—'}
   </td>
-
-  <td>{child.description || '—'}</td>
+<td className="description-column">
+  <DescriptionCell text={child.description} />
+</td>
+  
 
   <td>{child.responsable || '—'}</td>
 

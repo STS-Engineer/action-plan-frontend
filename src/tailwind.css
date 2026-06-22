@@ -1198,3 +1198,26 @@ code {
     }
   }
 }
+@layer components {
+  .description-cell {
+    @apply block overflow-hidden break-words leading-snug;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    max-width: 420px;
+    min-width: 260px;
+    white-space: normal;
+  }
+
+  .actions-table {
+    table-layout: fixed;
+  }
+
+  .actions-table .description-column,
+  .flat-actions-table .description-column,
+  td.description-column {
+    max-width: 420px;
+    width: 32%;
+    vertical-align: top;
+  }
+}

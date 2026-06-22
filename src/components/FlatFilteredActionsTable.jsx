@@ -4,6 +4,7 @@ import { StatusBadge } from "./StatusBadge";
 import { ActionLatestHistoryCells } from "./ActionLatestHistoryCells";
 import { getActionHomeStatusBucket } from "../utils/actionHomeStatus";
 import { ActionDeleteButton } from "./ActionDeleteButton";
+import DescriptionCell from "./DescriptionCell";
 import {
   ActionTableFilterControl,
   createEmptyActionColumnFilters,
@@ -239,9 +240,7 @@ export const FlatFilteredActionsTable = ({
               </td>
               <td className="action-table-title">{action.titre || "-"}</td>
               <td className="description-column">
-                <span className="table-description-text" title={action.description || ""}>
-                  {action.description || "-"}
-                </span>
+                <DescriptionCell text={action.description} />
               </td>
               <td>{action.responsable || "-"}</td>
               {showRequester && (
