@@ -23,6 +23,15 @@ export default function App() {
         />
 
         <Route
+          path="/home"
+          element={
+            <ProtectedRoute>
+              <Home />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
           path="/actions/:actionId"
           element={
             <ProtectedRoute>

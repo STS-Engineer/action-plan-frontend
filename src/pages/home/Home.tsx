@@ -3,7 +3,7 @@ import './Home.css';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { getHomeSummary, getSujetsRacineList, getTeamSujetsRacineList } from '../../redux/sujet/sujet';
-import { AlertCircle, Ban, Bot, CheckCircle2, Clock, Folder, FolderOpen, History, Search, X } from 'lucide-react';
+import { AlertCircle, Ban, Bell, Bot, CheckCircle2, Clock, Eye, Folder, FolderOpen, History, Search, ShieldCheck, X } from 'lucide-react';
 import { ItemCard } from '../../components/ItemCard';
 import { StatusBadge } from '../../components/StatusBadge';
 import { ActionHistoryModal } from '../../components/ActionHistoryModal';
@@ -20,18 +20,20 @@ import {
   filterActionsByColumnFilters,
   hasActiveActionColumnFilters,
 } from '../../components/ActionTableFilters';
-import { getFilteredActions, updateActionStatus } from '../../redux/action/action';
+import { getFilteredActions, getMyEscalations, updateActionStatus, updateEscalationNotification } from '../../redux/action/action';
 import { Sujet } from '../../redux/sujet/sujet-slice-types';
 import Select from 'react-select';
 import { getActionAccess, getEmails, smartSearchActions } from '../../redux/action/action';
 import { getActionHomeStatusBucket } from '../../utils/actionHomeStatus';
 import { clearTargetActionId, getStoredTargetActionId, storeTargetActionId } from '../../utils/actionDeepLink';
 import { clearAuthTokens } from '../../services/axiosInstance';
+import DescriptionCell from '../../components/DescriptionCell';
 
 const normalizeEmail = (value?: string | null) => value?.trim().toLowerCase() || null;
 type KpiFilter = "closed" | "in_progress" | "overdue" | "blocked";
 type KpiClickFilter = KpiFilter | "total";
 type HomeScope = "my" | "team" | "requested_by_me" | "all";
+type HomePanel = "actions" | "escalations";
 type AiCreatedPlanFocus = {
   rootSujetId: number | string | null;
   sujetIds: Array<number | string>;
@@ -81,6 +83,11 @@ const Home = () => {
   const [smartColumnFilters, setSmartColumnFilters] = useState(createEmptyActionColumnFilters);
   const [smartSearchLoading, setSmartSearchLoading] = useState(false);
   const [viewMode, setViewMode] = useState<HomeScope>("my");
+  const [activePanel, setActivePanel] = useState<HomePanel>(() => {
+    return new URLSearchParams(window.location.search).get("tab") === "escalations"
+      ? "escalations"
+      : "actions";
+  });
   const [selectedKpiFilters, setSelectedKpiFilters] = useState<KpiFilter[]>([]);
   const [filteredActionsByKpi, setFilteredActionsByKpi] = useState<Record<KpiFilter, any[]>>(
     createEmptyActionsByKpi
@@ -95,6 +102,9 @@ const Home = () => {
     createEmptyErrorsByKpi
   );
   const [historyAction, setHistoryAction] = useState<any | null>(null);
+  const [escalations, setEscalations] = useState<any[]>([]);
+  const [escalationsLoading, setEscalationsLoading] = useState(false);
+  const [escalationsError, setEscalationsError] = useState<string | null>(null);
   const [deepLinkedAction, setDeepLinkedAction] = useState<any | null>(null);
   const [deepLinkMessage, setDeepLinkMessage] = useState<string | null>(null);
   const [deepLinkAccessLoading, setDeepLinkAccessLoading] = useState(false);
@@ -209,6 +219,43 @@ const handleLogout = () => {
     }
   };
 
+  const fetchEscalations = async () => {
+    if (!loggedUserEmail) {
+      setEscalations([]);
+      return;
+    }
+
+    try {
+      setEscalationsLoading(true);
+      setEscalationsError(null);
+      const payload = await getMyEscalations({
+        all: isAdminUser && viewMode === "all",
+      });
+      setEscalations(payload?.escalations || []);
+    } catch (err: any) {
+      setEscalations([]);
+      setEscalationsError(
+        err?.response?.data?.detail || err?.message || "Unable to load escalations."
+      );
+    } finally {
+      setEscalationsLoading(false);
+    }
+  };
+
+  const selectActionScope = (scope: HomeScope) => {
+    setViewMode(scope);
+    setActivePanel("actions");
+    navigate("/", { replace: true });
+  };
+
+  const openEscalationsPanel = () => {
+    setActivePanel("escalations");
+    setSelectedKpiFilters([]);
+    setSearchTerm('');
+    setSmartResults([]);
+    navigate("/home?tab=escalations", { replace: true });
+  };
+
   const fetchSelectedKpiActions = async (filters = selectedKpiFilters) => {
     if (!filters.length || !loggedUserEmail || hasUnresolvedDeepLink) {
       return;
@@ -218,6 +265,7 @@ const handleLogout = () => {
   };
 
   const handleKpiClick = (filter: KpiClickFilter) => {
+    setActivePanel("actions");
     setSearchTerm('');
     setSmartResults([]);
     setSmartSearchLoading(false);
@@ -289,6 +337,7 @@ const handleLogout = () => {
     await Promise.all([
       fetchData(),
       selectedKpiFilters.length ? fetchSelectedKpiActions() : Promise.resolve(),
+      fetchEscalations(),
       options?.refreshSmartSearch && searchTerm.trim()
         ? smartSearchActions(searchTerm, {
             email: loggedUserEmail,
@@ -328,7 +377,30 @@ const handleLogout = () => {
     await Promise.all([
       fetchData(),
       selectedKpiFilters.length ? fetchSelectedKpiActions() : Promise.resolve(),
+      fetchEscalations(),
     ]);
+  };
+
+  const handleEscalationStatusChange = async (
+    escalationId: number | string,
+    status: "seen" | "dismiss" | "resolve"
+  ) => {
+    await updateEscalationNotification(escalationId, status);
+    await fetchEscalations();
+  };
+
+  const viewEscalationAction = (escalation: any) => {
+    setActivePanel("actions");
+    setSelectedKpiFilters([]);
+    setSearchTerm(escalation.action_title || String(escalation.action_id || ""));
+    navigate("/", { replace: true });
+
+    window.setTimeout(() => {
+      document.querySelector(".smart-search-results")?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }, 0);
   };
 
   useEffect(() => {
@@ -343,6 +415,21 @@ const handleLogout = () => {
     targetActionId,
     viewMode,
   ]);
+
+  useEffect(() => {
+    fetchEscalations();
+  }, [loggedUserEmail, isAdminUser, viewMode]);
+
+  useEffect(() => {
+    const tabFromUrl = new URLSearchParams(window.location.search).get("tab");
+
+    if (tabFromUrl === "escalations") {
+      setActivePanel("escalations");
+      setSelectedKpiFilters([]);
+      setSearchTerm('');
+      setSmartResults([]);
+    }
+  }, []);
 
   useEffect(() => {
     fetchSelectedKpiActions();
@@ -612,34 +699,44 @@ const handleLogout = () => {
         <div className="home-toolbar">
           <div className="view-tab-group">
             <button
-              className={viewMode === "my" ? "view-tab active" : "view-tab"}
-              onClick={() => setViewMode("my")}
+              className={activePanel === "actions" && viewMode === "my" ? "view-tab active" : "view-tab"}
+              onClick={() => selectActionScope("my")}
             >
               My Actions
             </button>
 
             <button
-              className={viewMode === "team" ? "view-tab active" : "view-tab"}
-              onClick={() => setViewMode("team")}
+              className={activePanel === "actions" && viewMode === "team" ? "view-tab active" : "view-tab"}
+              onClick={() => selectActionScope("team")}
             >
               Team Actions
             </button>
 
             <button
-              className={viewMode === "requested_by_me" ? "view-tab active" : "view-tab"}
-              onClick={() => setViewMode("requested_by_me")}
+              className={activePanel === "actions" && viewMode === "requested_by_me" ? "view-tab active" : "view-tab"}
+              onClick={() => selectActionScope("requested_by_me")}
             >
               Requested by Me
             </button>
 
             {isAdminUser && (
               <button
-                className={viewMode === "all" ? "view-tab active" : "view-tab"}
-                onClick={() => setViewMode("all")}
+                className={activePanel === "actions" && viewMode === "all" ? "view-tab active" : "view-tab"}
+                onClick={() => selectActionScope("all")}
               >
                 All Actions
               </button>
             )}
+
+            <button
+              className={activePanel === "escalations" ? "view-tab active escalation-tab-button" : "view-tab escalation-tab-button"}
+              onClick={openEscalationsPanel}
+            >
+              Escalations
+              {escalations.length > 0 && (
+                <span className="view-tab-badge">{escalations.length}</span>
+              )}
+            </button>
           </div>
 
           <div className="home-toolbar-right">
@@ -741,6 +838,7 @@ const handleLogout = () => {
                 setSearchTerm(nextValue);
 
                 if (nextValue.trim()) {
+                  setActivePanel("actions");
                   setSelectedKpiFilters([]);
                 }
               }}
@@ -855,7 +953,134 @@ const handleLogout = () => {
             </div>
           )}
 
-          {selectedKpiFilters.length === 0 && searchTerm.trim() && (
+          {activePanel === "escalations" && (
+            <div className="escalations-panel">
+              <h2 className="main-title">
+                <Bell className="main-title-icon" size={28} />
+                Pending escalations
+                <span className="main-title-count">({escalations.length})</span>
+              </h2>
+
+              {escalationsLoading ? (
+                <p className="loading-text">Loading escalations...</p>
+              ) : escalationsError ? (
+                <div className="empty-state">
+                  <AlertCircle size={56} className="empty-icon" />
+                  <p className="empty-text">{escalationsError}</p>
+                </div>
+              ) : escalations.length > 0 ? (
+                <div className="actions-table-wrapper escalations-table-wrapper">
+                  <table className="actions-table escalations-table">
+                    <thead>
+                      <tr>
+                        <th>Escalation level</th>
+                        <th>Priority</th>
+                        <th>Topic</th>
+                        <th>Action title</th>
+                        <th className="description-column">Description</th>
+                        <th>Responsible</th>
+                        <th>Requester</th>
+                        <th>Due date</th>
+                        <th>Status</th>
+                        <th>Created at</th>
+                        <th>History/action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {escalations.map((escalation: any) => (
+                        <tr key={escalation.id} data-action-id={escalation.action_id}>
+                          <td>
+                            <span className="escalation-level-pill">
+                              L{escalation.escalation_level ?? '—'}
+                            </span>
+                          </td>
+                          <td>
+                            <span className="priority-pill">
+                              {escalation.priority_index ?? '—'}
+                            </span>
+                          </td>
+                          <td className="topic-path-cell">
+                            {escalation.topic_path || escalation.topic || '—'}
+                          </td>
+                          <td className="action-table-title">
+                            {escalation.action_title || '—'}
+                          </td>
+                          <td className="description-column">
+                            <DescriptionCell text={escalation.description} />
+                          </td>
+                          <td>
+                            <div className="person-cell">
+                              <strong>{escalation.responsible || '—'}</strong>
+                              <span>{escalation.email_responsable || ''}</span>
+                            </div>
+                          </td>
+                          <td>
+                            <div className="person-cell">
+                              <strong>{escalation.requester || '—'}</strong>
+                              <span>{escalation.email_demandeur || ''}</span>
+                            </div>
+                          </td>
+                          <td>{escalation.due_date || '—'}</td>
+                          <td>{escalation.status || '—'}</td>
+                          <td>{escalation.created_at ? new Date(escalation.created_at).toLocaleString() : '—'}</td>
+                          <td className="history-cell escalation-action-cell">
+                            <button
+                              type="button"
+                              className="history-button"
+                              onClick={() => setHistoryAction({
+                                id: escalation.action_id,
+                                titre: escalation.action_title,
+                              })}
+                            >
+                              <History size={14} />
+                              History
+                            </button>
+                            <button
+                              type="button"
+                              className="history-button"
+                              onClick={() => viewEscalationAction(escalation)}
+                            >
+                              <Eye size={14} />
+                              View
+                            </button>
+                            <button
+                              type="button"
+                              className="escalation-state-button"
+                              onClick={() => handleEscalationStatusChange(escalation.id, "seen")}
+                            >
+                              Seen
+                            </button>
+                            <button
+                              type="button"
+                              className="escalation-state-button"
+                              onClick={() => handleEscalationStatusChange(escalation.id, "dismiss")}
+                            >
+                              Dismiss
+                            </button>
+                            <button
+                              type="button"
+                              className="escalation-state-button resolve"
+                              onClick={() => handleEscalationStatusChange(escalation.id, "resolve")}
+                            >
+                              <ShieldCheck size={14} />
+                              Resolve
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="empty-state">
+                  <Bell size={56} className="empty-icon" />
+                  <p className="empty-text">No pending escalations.</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activePanel === "actions" && selectedKpiFilters.length === 0 && searchTerm.trim() && (
   <div className="smart-search-results">
     <h2 className="main-title">
       <Search className="main-title-icon" size={28} />
@@ -1067,7 +1292,7 @@ const handleLogout = () => {
     )}
   </div>
 )}
-         {activeKpiFilters.length > 0 && (
+         {activePanel === "actions" && activeKpiFilters.length > 0 && (
   <div className="kpi-filtered-sections">
     {activeKpiFilters.map((filter) => (
       <section className="kpi-filtered-section" key={filter}>
@@ -1096,7 +1321,7 @@ const handleLogout = () => {
     ))}
   </div>
 )}
-         {!searchTerm.trim() && activeKpiFilters.length === 0 && (
+         {activePanel === "actions" && !searchTerm.trim() && activeKpiFilters.length === 0 && (
   <>
     <h2 className="main-title">
       <FolderOpen className="main-title-icon" size={32} />

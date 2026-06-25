@@ -215,6 +215,31 @@ body {
   border-color: #2563eb;
 }
 
+.escalation-tab-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.view-tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: #dc2626;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.view-tab.active .view-tab-badge {
+  background: #ffffff;
+  color: #1d4ed8;
+}
+
 .home-toolbar-right {
   display: flex;
   align-items: center;
@@ -862,6 +887,65 @@ body {
 
 .flat-actions-table {
   min-width: 1720px;
+}
+
+.escalations-panel {
+  min-width: 0;
+}
+
+.escalations-table-wrapper {
+  margin-top: 0.75rem;
+}
+
+.escalations-table {
+  min-width: 1680px;
+}
+
+.escalation-level-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  height: 26px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: #fff1f2;
+  color: #be123c;
+  border: 1px solid #fecdd3;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.escalation-action-cell {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 260px;
+}
+
+.escalation-state-button {
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  color: #334155;
+  min-height: 30px;
+  padding: 6px 9px;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 900;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.escalation-state-button.resolve {
+  border-color: #bbf7d0;
+  background: #ecfdf5;
+  color: #047857;
 }
 
 .action-table-filter-row th {

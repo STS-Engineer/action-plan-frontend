@@ -199,6 +199,30 @@ export const getFilteredActions = async (options: {
     return response.data;
 };
 
+export const getMyEscalations = async (options?: { all?: boolean }) => {
+    const params = new URLSearchParams();
+
+    if (options?.all) {
+        params.set("all", "true");
+    }
+
+    const query = params.toString();
+    const response = await axiosInstance.get(
+        `/api/escalations/my${query ? `?${query}` : ""}`
+    );
+
+    return response.data;
+};
+
+export const updateEscalationNotification = async (
+    escalationId: number | string,
+    status: "seen" | "dismiss" | "resolve"
+) => {
+    const response = await axiosInstance.post(`/api/escalations/${escalationId}/${status}`);
+
+    return response.data;
+};
+
 export const getActionStatusComments = async (actionId: number) => {
     const url = `/api/action_plan_action/actions/${actionId}/status-comments`;
 
