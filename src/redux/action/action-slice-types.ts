@@ -1,6 +1,5 @@
 export interface ActionState {
     actionsList : Action[],
-    emailsList : [],
     success: boolean,
     error: string | null,
 }

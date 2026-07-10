@@ -22,8 +22,7 @@ import {
 } from '../../components/ActionTableFilters';
 import { getFilteredActions, getMyEscalations, updateActionStatus, updateEscalationNotification } from '../../redux/action/action';
 import { Sujet } from '../../redux/sujet/sujet-slice-types';
-import Select from 'react-select';
-import { getActionAccess, getEmails, smartSearchActions } from '../../redux/action/action';
+import { getActionAccess, smartSearchActions } from '../../redux/action/action';
 import { getActionHomeStatusBucket } from '../../utils/actionHomeStatus';
 import { clearTargetActionId, getStoredTargetActionId, storeTargetActionId } from '../../utils/actionDeepLink';
 import { clearAuthTokens } from '../../services/axiosInstance';
@@ -73,7 +72,6 @@ const Home = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { homeSummary, sujetsRacineList = [] } = useSelector((state: any) => state.sujet);
-  const { emailsList = [] } = useSelector((state: any) => state.action);
 
   const [initialLoading, setInitialLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -120,8 +118,6 @@ const Home = () => {
   const loggedUserEmail = normalizeEmail(loggedUser?.email);
   const isAdminUser = String(loggedUser?.role || "").trim().toLowerCase() === "admin";
   const hasUnresolvedDeepLink = Boolean(targetActionId) && !deepLinkMessage && !accessDeniedMessage;
-
-  const [email, setEmail] = useState<string | null>(loggedUser?.email || null);
 
 const handleLogout = () => {
   clearAuthTokens();
@@ -179,7 +175,6 @@ const handleLogout = () => {
           ? getTeamSujetsRacineList(dispatch, loggedUserEmail)
           : getSujetsRacineList(dispatch, loggedUserEmail, null, viewMode),
         getHomeSummary(dispatch, loggedUserEmail, viewMode),
-        getEmails(dispatch),
         ]);
     } catch (err: any) {
         setError(err?.message || 'Failed to load data');
@@ -409,7 +404,6 @@ const handleLogout = () => {
     accessDeniedMessage,
     deepLinkMessage,
     dispatch,
-    email,
     hasUnresolvedDeepLink,
     loggedUserEmail,
     targetActionId,
@@ -844,17 +838,6 @@ const handleLogout = () => {
               }}
             />
           </div>
-          <div style={{ flex: 1, maxWidth: 360 }}>
-            <Select
-                options={emailsList?.map((email: any) => ({
-                    value: email,
-                    label: email,
-                }))}
-                placeholder="Filter by email..."
-                isClearable
-                onChange={(e: any) => setEmail(e?.value || null)}
-                />
-            </div>
         </div>
 
         <div className="main-content">

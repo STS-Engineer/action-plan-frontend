@@ -3,7 +3,6 @@ import { ActionState } from "./action-slice-types";
 
 const initialState: ActionState = {
     actionsList : [],
-    emailsList : [],
     success: false,
     error: null
 }
@@ -21,18 +20,6 @@ const actionSlice = createSlice({
             state.success = true;
         },
         getActionsBySujetFailure(state, action) {
-            state.error = action.payload;
-            state.success = false;
-        },
-        getEmailsRequest(state) {
-            state.success = false;
-            state.error = null;
-        },
-        getEmailsSuccess(state, action) {
-            state.emailsList = action.payload;
-            state.success = true;
-        },
-        getEmailsFailure(state, action) {
             state.error = action.payload;
             state.success = false;
         },
@@ -60,9 +47,6 @@ export const {
     getActionsBySujetRequest,
     getActionsBySujetSuccess,
     getActionsBySujetFailure,
-    getEmailsRequest,
-    getEmailsSuccess,
-    getEmailsFailure,
     updateActionStatusRequest,
     updateActionStatusSuccess,
     updateActionStatusFailure
