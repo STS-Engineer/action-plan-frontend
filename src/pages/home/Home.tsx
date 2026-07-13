@@ -3,7 +3,7 @@ import './Home.css';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { getHomeSummary, getSujetsRacineList, getTeamSujetsRacineList } from '../../redux/sujet/sujet';
-import { AlertCircle, Ban, Bell, Bot, CheckCircle2, Clock, Eye, Folder, FolderOpen, History, Search, ShieldCheck, X } from 'lucide-react';
+import { AlertCircle, Ban, Bell, CheckCircle2, Clock, Eye, Folder, FolderOpen, History, Search, ShieldCheck, X } from 'lucide-react';
 import { ItemCard } from '../../components/ItemCard';
 import { StatusBadge } from '../../components/StatusBadge';
 import { ActionHistoryModal } from '../../components/ActionHistoryModal';
@@ -145,10 +145,6 @@ const handleLogout = () => {
         block: "start",
       });
     }, 0);
-  };
-
-  const openAiModal = () => {
-    setAiModalOpen(true);
   };
 
   const closeAiModal = () => {
@@ -808,14 +804,6 @@ const handleLogout = () => {
               </div>
             )}
 
-            <button
-              type="button"
-              className="ai-create-button"
-              onClick={openAiModal}
-            >
-              <Bot size={16} />
-              IA Assistant
-            </button>
           </div>
         </div>
 
