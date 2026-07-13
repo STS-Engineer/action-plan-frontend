@@ -17,6 +17,7 @@ export interface Sujet {
     titre: string,
     parent_sujet_id: number | null,
     code: string,
+    source_application: string | null,
     created_at: string,
     total_actions: number,
     completed_actions: number,

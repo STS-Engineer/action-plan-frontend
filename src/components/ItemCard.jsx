@@ -365,7 +365,14 @@ export const ItemCard = (props) => {
                         </span>
                       </div>
 
-                      {item.rm_stock_app && (
+                      {item.source_application && (
+                        <div className="meta-item">
+                          <span className={`status-badge ${localStatus?.toLowerCase() ?? 'open'}`}>
+                            {item.source_application}
+                          </span>
+                        </div>
+                      )}
+                      {!item.source_application && item.rm_stock_app && (
                         <div className="meta-item">
                           <Link
                             to="https://avocarbon-rm-stock.azurewebsites.net"
@@ -376,7 +383,7 @@ export const ItemCard = (props) => {
                           </Link>
                         </div>
                       )}
-                      {item.corrective_action_app && (
+                      {!item.source_application && item.corrective_action_app && (
                         <div className="meta-item">
                           <Link
                             to="https://avocarbon-customer-complaint.azurewebsites.net/complaints"
@@ -595,7 +602,13 @@ export const ItemCard = (props) => {
   </td>
 
   <td>
-    {child.rm_stock_app && (
+    {child.source_application && (
+      <span className={`status-badge ${child.status?.toLowerCase() ?? 'open'}`}>
+        {child.source_application}
+      </span>
+    )}
+
+    {!child.source_application && child.rm_stock_app && (
       <Link
         to="https://avocarbon-rm-stock.azurewebsites.net"
         className={`status-badge ${child.status?.toLowerCase() ?? 'open'}`}
@@ -605,7 +618,7 @@ export const ItemCard = (props) => {
       </Link>
     )}
 
-    {child.corrective_action_app && (
+    {!child.source_application && child.corrective_action_app && (
       <Link
         to="https://avocarbon-customer-complaint.azurewebsites.net/complaints"
         className={`status-badge ${child.status?.toLowerCase() ?? 'open'}`}
@@ -615,7 +628,7 @@ export const ItemCard = (props) => {
       </Link>
     )}
 
-    {!child.rm_stock_app && !child.corrective_action_app && '—'}
+    {!child.source_application && !child.rm_stock_app && !child.corrective_action_app && '-'}
   </td>
 
   <td>

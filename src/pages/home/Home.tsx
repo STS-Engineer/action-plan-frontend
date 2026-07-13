@@ -1203,7 +1203,13 @@ const handleLogout = () => {
       <td>{action.due_date || '—'}</td>
 
       <td>
-        {action.rm_stock_app && (
+        {action.source_application && (
+          <span className={`status-badge ${action.status?.toLowerCase() ?? 'open'}`}>
+            {action.source_application}
+          </span>
+        )}
+
+        {!action.source_application && action.rm_stock_app && (
           <a
             href="https://avocarbon-rm-stock.azurewebsites.net"
             className={`status-badge ${action.status?.toLowerCase() ?? 'open'}`}
@@ -1214,7 +1220,7 @@ const handleLogout = () => {
           </a>
         )}
 
-        {action.corrective_action_app && (
+        {!action.source_application && action.corrective_action_app && (
           <a
             href="https://avocarbon-customer-complaint.azurewebsites.net/complaints"
             className={`status-badge ${action.status?.toLowerCase() ?? 'open'}`}
@@ -1225,9 +1231,10 @@ const handleLogout = () => {
           </a>
         )}
 
-        {!action.rm_stock_app &&
+        {!action.source_application &&
+          !action.rm_stock_app &&
           !action.corrective_action_app &&
-          '—'}
+          '-'}
       </td>
 
       <td>
