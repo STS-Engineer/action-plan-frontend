@@ -22,6 +22,7 @@ import { getActionHomeStatusBucket } from '../utils/actionHomeStatus';
 import { ActionHistoryModal } from './ActionHistoryModal';
 import { ActionLatestHistoryCells } from './ActionLatestHistoryCells';
 import { ActionDeleteButton } from './ActionDeleteButton';
+import { SujetDeleteButton } from './SujetDeleteButton';
 import {
   ActionTableFilterControl,
   createEmptyActionColumnFilters,
@@ -47,6 +48,7 @@ export const ItemCard = (props) => {
     forceExpandedSujetIds = [],
     onForceExpandConsumed = null,
     onActionDeleted = null,
+    onSujetDeleted = null,
     onActionStatusChanged = null,
     loggedUserEmail = null,
     viewMode = 'my',
@@ -259,6 +261,17 @@ export const ItemCard = (props) => {
     onActionDeleted?.(deletedAction, result);
   };
 
+  const handleSujetDeleted = async (deletedSujet, result) => {
+    const deletedIds = new Set(
+      (result?.deleted_sujet_ids || [deletedSujet.id]).map((id) => String(id))
+    );
+
+    setChildren((prev) =>
+      prev.filter((child) => child.itemType !== 'sujet' || !deletedIds.has(String(child.id)))
+    );
+    await onSujetDeleted?.(deletedSujet, result);
+  };
+
   return (
     <>
     <div
@@ -409,6 +422,16 @@ export const ItemCard = (props) => {
               </div>
             </div>
 
+            {isSujet && (
+              <div className="item-header-actions" onClick={(event) => event.stopPropagation()}>
+                <SujetDeleteButton
+                  sujet={item}
+                  label={getLabel(SUJET_LABELS, sujetDepth).toLowerCase()}
+                  onDeleted={handleSujetDeleted}
+                />
+              </div>
+            )}
+
             <button className="item-toggle" aria-label={expanded ? 'Collapse' : 'Expand'}>
               {expanded ? <ChevronDown size={28} /> : <ChevronRight size={28} />}
             </button>
@@ -450,6 +473,7 @@ export const ItemCard = (props) => {
                       forceExpandedSujetIds={forceExpandedSujetIds}
                       onForceExpandConsumed={onForceExpandConsumed}
                       onActionDeleted={onActionDeleted}
+                      onSujetDeleted={handleSujetDeleted}
                       onActionStatusChanged={onActionStatusChanged}
                       loggedUserEmail={loggedUserEmail}
                       viewMode={viewMode}

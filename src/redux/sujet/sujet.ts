@@ -146,6 +146,12 @@ export const getSujetSousSujets: GetSujetSousSujetsListRequestAction = async (
         throw error
     };
 }
+
+export const deleteSujet = async (sujetId: number | string) => {
+    const response = await axiosInstance.delete(`/api/action_plan_sujet/sujets/${sujetId}`);
+    return response.data;
+};
+
 export const getTeamSujetsRacineList = async (
     dispatch: any,
     email: string,

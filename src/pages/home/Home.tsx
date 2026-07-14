@@ -372,6 +372,16 @@ const handleLogout = () => {
     ]);
   };
 
+  const handleSujetDeleted = async (_deletedSujet: any, _result: any) => {
+    setActionDeletedMessage('Topic deleted.');
+
+    await Promise.all([
+      fetchData(),
+      selectedKpiFilters.length ? fetchSelectedKpiActions() : Promise.resolve(),
+      fetchEscalations(),
+    ]);
+  };
+
   const handleEscalationStatusChange = async (
     escalationId: number | string,
     status: "seen" | "dismiss" | "resolve"
@@ -1322,6 +1332,7 @@ const handleLogout = () => {
             forceExpandedSujetIds={aiCreatedPlanFocus?.sujetIds || []}
             onForceExpandConsumed={handleForceExpandConsumed}
             onActionDeleted={handleActionDeleted}
+            onSujetDeleted={handleSujetDeleted}
             onActionStatusChanged={() => refreshAfterStatusChange()}
             loggedUserEmail={loggedUserEmail}
             viewMode={viewMode}

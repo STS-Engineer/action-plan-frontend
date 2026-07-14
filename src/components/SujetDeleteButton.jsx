@@ -1,25 +1,24 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { Trash2, X } from "lucide-react";
-import { deleteAction } from "../redux/action/action";
+import { deleteSujet } from "../redux/sujet/sujet";
 
-const getForbiddenMessage = (error) => {
-  return (
-    error?.response?.data?.detail ||
-    error?.message ||
-    "Unable to delete action."
-  );
-};
+const getDeleteErrorMessage = (error) => (
+  error?.response?.data?.detail ||
+  error?.message ||
+  "Unable to delete topic."
+);
 
-export const ActionDeleteButton = ({
-  action,
+export const SujetDeleteButton = ({
+  sujet,
+  label = "topic",
   onDeleted,
 }) => {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  if (!action?.id) {
+  if (!sujet?.id) {
     return null;
   }
 
@@ -34,27 +33,29 @@ export const ActionDeleteButton = ({
     setError(null);
 
     try {
-      const result = await deleteAction(action.id);
+      const result = await deleteSujet(sujet.id);
       setConfirmOpen(false);
-      await onDeleted?.(action, result);
+      await onDeleted?.(sujet, result);
     } catch (err) {
-      setError(getForbiddenMessage(err));
+      setError(getDeleteErrorMessage(err));
     } finally {
       setLoading(false);
     }
   };
 
+  const title = sujet.titre || `Topic #${sujet.id}`;
+
   return (
     <>
       <button
         type="button"
-        className="delete-action-button"
+        className="delete-action-button delete-sujet-button"
         onClick={(event) => {
           event.stopPropagation();
           setConfirmOpen(true);
         }}
-        title="Delete action"
-        aria-label="Delete action"
+        title={`Delete ${label}`}
+        aria-label={`Delete ${label}`}
       >
         <Trash2 size={14} />
         Delete
@@ -67,15 +68,15 @@ export const ActionDeleteButton = ({
               className="status-modal delete-action-modal"
               role="dialog"
               aria-modal="true"
-              aria-labelledby="delete-action-title"
+              aria-labelledby="delete-sujet-title"
               onClick={(event) => event.stopPropagation()}
             >
               <div className="status-modal-header">
                 <div>
-                  <h3 id="delete-action-title">Delete action?</h3>
+                  <h3 id="delete-sujet-title">Delete {label}?</h3>
                   <p>
-                    This will remove the action from active views. History and attachments
-                    will be kept for audit.
+                    Empty topics and subtopics are removed from active views.
+                    Actions, child topics, and child subtopics are not cascaded.
                   </p>
                 </div>
                 <button
@@ -90,8 +91,8 @@ export const ActionDeleteButton = ({
               </div>
 
               <div className="delete-action-summary">
-                <span>Action</span>
-                <strong>{action.titre || `Action #${action.id}`}</strong>
+                <span>{label}</span>
+                <strong>{title}</strong>
               </div>
 
               {error && <div className="status-modal-error">{error}</div>}
@@ -111,7 +112,7 @@ export const ActionDeleteButton = ({
                   onClick={handleDelete}
                   disabled={loading}
                 >
-                  {loading ? "Deleting..." : "Delete action"}
+                  {loading ? "Deleting..." : `Delete ${label}`}
                 </button>
               </div>
             </div>
